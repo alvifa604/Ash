@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hada.Entry", "Hada.Entry\Ha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hada.Core", "Hada.Core\Hada.Core.csproj", "{393BEA86-F413-48C4-AE44-A95E70F0F64D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hada.Tests", "Hada.Tests\Hada.Tests.csproj", "{ABC0093F-AB87-4CD2-B4D7-B66742D8249C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{393BEA86-F413-48C4-AE44-A95E70F0F64D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{393BEA86-F413-48C4-AE44-A95E70F0F64D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{393BEA86-F413-48C4-AE44-A95E70F0F64D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ABC0093F-AB87-4CD2-B4D7-B66742D8249C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABC0093F-AB87-4CD2-B4D7-B66742D8249C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABC0093F-AB87-4CD2-B4D7-B66742D8249C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ABC0093F-AB87-4CD2-B4D7-B66742D8249C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
