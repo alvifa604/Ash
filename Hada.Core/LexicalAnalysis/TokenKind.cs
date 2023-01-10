@@ -2,6 +2,7 @@ namespace Hada.Core.LexicalAnalysis;
 
 public enum TokenKind
 {
+    // Tokens
     IntegerToken,
     DoubleToken,
     PlusToken,
@@ -12,5 +13,9 @@ public enum TokenKind
     CloseParenthesisToken,
     WhiteSpaceToken,
     EndOfFileToken,
-    BadToken
+    BadToken,
+
+    // Expressions
+    NumberExpression,
+    BinaryExpression
 }
