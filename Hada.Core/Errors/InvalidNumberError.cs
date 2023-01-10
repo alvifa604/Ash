@@ -4,16 +4,16 @@ namespace Hada.Core.Errors;
 
 public sealed class InvalidNumberError : Error
 {
-    public string Details { get; }
+    private readonly string _details;
     public override ErrorType ErrorType => ErrorType.InvalidNumber;
 
     public InvalidNumberError(string details, Position posStart, Position posEnd) : base(posStart, posEnd)
     {
-        Details = details;
+        _details = details;
     }
 
     public override string ToString()
     {
-        return $"ERROR {(int)ErrorType}: {Details}. File {PosStart.FileName}. ({PosStart.Line}, {PosStart.Column})";
+        return $"ERROR {(int)ErrorType}: {_details}. File {PosStart.FileName}. ({PosStart.Line}, {PosStart.Column})";
     }
 }
