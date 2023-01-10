@@ -1,4 +1,5 @@
 using Hada.Core.LexicalAnalysis;
+using Hada.Core.Text;
 using Xunit;
 
 namespace Hada.Tests.LexicalAnalysis;
@@ -9,9 +10,10 @@ public class LexerTests
     [InlineData("32 + 22 / 2 * 4", 8)]
     [InlineData("32,12 - 12 + 221", 6)]
     [InlineData("32,12 - 12 + 221 * (21 + 1) / 2", 14)]
-    public static void Lexer_MakesCorrectToken_Amount(string source, int amount)
+    public static void Lexer_MakesCorrectToken_Amount(string text, int amount)
     {
-        var lexer = new Lexer(source, "Test.hada");
+        var source = new SourceText(text, "Test.hada");
+        var lexer = new Lexer(source);
         var tokens = lexer.GenerateTokens().ToList();
 
         Assert.Equal(amount, tokens.Count);
@@ -19,12 +21,13 @@ public class LexerTests
 
     [Theory]
     [MemberData(nameof(SetTokensWithKind))]
-    public static void Lexer_MakesCorrectToken_WithRightKindAndText(string source, TokenKind kind)
+    public static void Lexer_MakesCorrectToken_WithRightKindAndText(string text, TokenKind kind)
     {
-        var lexer = new Lexer(source, "Test.hada");
+        var source = new SourceText(text, "Test.hada");
+        var lexer = new Lexer(source);
         var tokens = lexer.GenerateTokens().ToList();
 
-        Assert.Equal(source, tokens[0].Text);
+        Assert.Equal(text, tokens[0].Text);
         Assert.Equal(kind, tokens[0].Kind);
     }
 
