@@ -11,16 +11,8 @@ public class LexerTests
     [InlineData("32,12 - 12 + 221 * (21 + 1) / 2", 14)]
     public static void Lexer_MakesCorrectToken_Amount(string source, int amount)
     {
-        var lexer = new Lexer(source);
-        var tokens = new List<Token>();
-
-        Token token;
-        do
-        {
-            token = lexer.NextToken();
-            if (token.Kind is not TokenKind.WhiteSpaceToken or TokenKind.BadToken)
-                tokens.Add(token);
-        } while (token.Kind is not TokenKind.EndOfFileToken);
+        var lexer = new Lexer(source, "Test.hada");
+        var tokens = lexer.GenerateTokens().ToList();
 
         Assert.Equal(amount, tokens.Count);
     }
@@ -29,16 +21,8 @@ public class LexerTests
     [MemberData(nameof(SetTokensWithKind))]
     public static void Lexer_MakesCorrectToken_WithRightKindAndText(string source, TokenKind kind)
     {
-        var lexer = new Lexer(source);
-        var tokens = new List<Token>();
-
-        Token token;
-        do
-        {
-            token = lexer.NextToken();
-            if (token.Kind is not TokenKind.WhiteSpaceToken or TokenKind.BadToken)
-                tokens.Add(token);
-        } while (token.Kind is not TokenKind.EndOfFileToken);
+        var lexer = new Lexer(source, "Test.hada");
+        var tokens = lexer.GenerateTokens().ToList();
 
         Assert.Equal(source, tokens[0].Text);
         Assert.Equal(kind, tokens[0].Kind);

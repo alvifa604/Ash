@@ -1,4 +1,5 @@
-﻿using Hada.Core.LexicalAnalysis;
+﻿using Hada.Core.Errors;
+using Hada.Core.LexicalAnalysis;
 
 namespace Hada.Entry;
 
@@ -6,21 +7,54 @@ public static class Program
 {
     public static void Main(string[] args)
     {
-        var lex = new Lexer("23,48 + 12 - 42 / 2 * 65,321");
-        var tokens = new List<Token>();
-        Token token;
-        do
+        var file = new FileStream("/Users/alberto/Desktop/C#/Hada/Samples/Addition.hada", FileMode.Open);
+        var fileName = file.Name.Split('/').Last();
+        var extension = fileName.Split('.').Last();
+        if (extension != "hada")
         {
-            token = lex.NextToken();
-            if (token.Kind is not TokenKind.WhiteSpaceToken or TokenKind.BadToken)
-                tokens.Add(token);
-        } while (token.Kind is not TokenKind.EndOfFileToken);
+            Console.WriteLine("Invalid file extension");
+            return;
+        }
 
-        if (!lex.Errors.Any())
-            foreach (var t in tokens)
-                Console.WriteLine(t.ToString());
+        using (var stream = new StreamReader(file))
+        {
+            var text = stream.ReadToEnd();
+            if (string.IsNullOrEmpty(text))
+                return;
 
-        foreach (var lexError in lex.Errors)
-            Console.WriteLine(lexError);
+            var lexerResult = RunLexer(text, fileName);
+            if (lexerResult.errors.Any())
+                foreach (var error in lexerResult.errors)
+                    Console.WriteLine(error.ToString());
+            else
+                foreach (var token in lexerResult.tokens)
+                    Console.WriteLine(token.ToString());
+        }
+
+        file.Close();
+
+        /*while (true)
+        {
+            Console.Write(">> ");
+            var input = Console.ReadLine();
+            if (string.IsNullOrEmpty(input))
+                break;
+
+            var lexerResult = RunLexer(input);
+            if (lexerResult.errors.Any())
+                foreach (var error in lexerResult.errors)
+                    Console.WriteLine(error.ToString());
+            else
+                foreach (var token in lexerResult.tokens)
+                    Console.WriteLine(token.ToString());
+        }*/
+    }
+
+    private static (IEnumerable<Token> tokens, IEnumerable<Error> errors) RunLexer(string source, string fileName)
+    {
+        var lexer = new Lexer(source, fileName);
+        var tokens = lexer.GenerateTokens().ToArray();
+        var errors = lexer.Errors.ToArray();
+        return (tokens, errors);
     }
 }
