@@ -1,9 +1,12 @@
+using System.Runtime.CompilerServices;
 using Hada.Core.Errors;
 using Hada.Core.Text;
 
+[assembly: InternalsVisibleTo("Hada.Tests")]
+
 namespace Hada.Core.LexicalAnalysis;
 
-public sealed class Lexer
+internal sealed class Lexer
 {
     private readonly SourceText _source;
     private readonly Position _position;

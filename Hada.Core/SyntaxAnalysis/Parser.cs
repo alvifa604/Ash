@@ -4,7 +4,7 @@ using Hada.Core.Text;
 
 namespace Hada.Core.SyntaxAnalysis;
 
-public class Parser
+internal sealed class Parser
 {
     public ErrorsBag ErrorsBag { get; } = new();
     private readonly Token[] _tokens;
