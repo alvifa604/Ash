@@ -1,6 +1,6 @@
 namespace Hada.Core.LexicalAnalysis;
 
-public class Token
+public sealed class Token
 {
     public TokenKind Kind { get; }
     public string Text { get; }
