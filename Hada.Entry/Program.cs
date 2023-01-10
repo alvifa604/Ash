@@ -53,7 +53,7 @@ public static class Program
             var lexerResult = RunLexer(source);
             if (lexerResult.errors.Any())
             {
-                lexerResult.errors.WriteErrors();
+                lexerResult.errors.WriteErrors(source);
                 Console.WriteLine("Errors written");
             }
             else

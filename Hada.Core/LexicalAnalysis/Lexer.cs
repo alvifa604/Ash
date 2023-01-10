@@ -14,13 +14,12 @@ public sealed class Lexer
     private TokenKind _tokenKind;
     private object? _tokenValue;
 
-    public ErrorsBag ErrorsBag { get; }
+    public ErrorsBag ErrorsBag { get; } = new();
 
     public Lexer(SourceText source)
     {
         _source = source;
         _position = new Position(1, 0, 0, source.FileName, source.Text);
-        ErrorsBag = new ErrorsBag(_source);
     }
 
     public IEnumerable<Token> GenerateTokens()

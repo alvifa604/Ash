@@ -7,15 +7,9 @@ namespace Hada.Core.Errors;
 
 public sealed class ErrorsBag : IEnumerable<Error>
 {
-    private readonly SourceText _source;
     private readonly List<Error> _errors = new();
     public int Count => _errors.Count;
     public Error this[int index] => _errors[index];
-
-    public ErrorsBag(SourceText source)
-    {
-        _source = source;
-    }
 
     public void AddRange(ErrorsBag bag)
     {
@@ -35,18 +29,18 @@ public sealed class ErrorsBag : IEnumerable<Error>
         _errors.Add(error);
     }
 
-    public void WriteErrors()
+    public void WriteErrors(SourceText source)
     {
-        var fileName = $"/Users/alberto/Desktop/C#/Hada/Samples/{_source.FileName}-Errors.txt";
+        var fileName = $"/Users/alberto/Desktop/C#/Hada/Samples/{source.FileName}-Errors.txt";
         var file = File.Create(fileName);
 
         var currLine = 0;
         var errorIndex = 0;
         var line = new StringBuilder();
 
-        while (currLine < _source.LineCount)
+        while (currLine < source.LineCount)
         {
-            var text = _source[currLine];
+            var text = source[currLine];
             var lineNumber = currLine + 1;
 
             line.AppendLine($"{lineNumber}: {text}");
