@@ -19,7 +19,8 @@ public sealed class ErrorsBag : IEnumerable<Error>
     // Lexer errors
     public void ReportIllegalCharacterError(char @char, Position start, Position end)
     {
-        var error = new IllegalCharacterError(@char, start, end);
+        var message = $"Illegal character '{@char}'";
+        var error = new IllegalCharacterError(message, start, end);
         _errors.Add(error);
     }
 
@@ -27,6 +28,11 @@ public sealed class ErrorsBag : IEnumerable<Error>
     {
         var error = new InvalidNumberError(details, start, end);
         _errors.Add(error);
+    }
+
+    public void ReportUnexpectedToken(string message, Position start, Position end)
+    {
+        throw new NotImplementedException();
     }
 
     public void WriteErrors(SourceText source)
