@@ -1,11 +1,12 @@
 using Hada.Core.Errors;
+using Hada.Core.Text;
 
 namespace Hada.Core.LexicalAnalysis;
 
 public sealed class Lexer
 {
-    //private int _position;
-    private readonly Position _pos;
+    private readonly SourceText _source;
+    private readonly Position _position;
     private char Current => Peek();
 
     //Token information
@@ -13,16 +14,13 @@ public sealed class Lexer
     private TokenKind _tokenKind;
     private object? _tokenValue;
 
-    private readonly List<Error> _errors = new();
-    public IEnumerable<Error> Errors => _errors;
+    public ErrorsBag ErrorsBag { get; }
 
-
-    private readonly string _source;
-
-    public Lexer(string source, string fileName)
+    public Lexer(SourceText source)
     {
         _source = source;
-        _pos = new Position(1, 0, 0, fileName, source);
+        _position = new Position(1, 0, 0, source.FileName, source.Text);
+        ErrorsBag = new ErrorsBag(_source);
     }
 
     public IEnumerable<Token> GenerateTokens()
@@ -38,7 +36,7 @@ public sealed class Lexer
 
     private Token NextToken()
     {
-        _start = _pos.Index;
+        _start = _position.Index;
         _tokenKind = TokenKind.BadToken;
         _tokenValue = null;
 
@@ -89,16 +87,15 @@ public sealed class Lexer
                 Advance();
                 break;
             default:
-                var posStart = _pos.Clone();
+                var posStart = _position.Clone();
                 var illegalChar = Current;
                 Advance();
-                var illegalCharError = new IllegalCharacterError(illegalChar, posStart, _pos.Clone());
-                _errors.Add(illegalCharError);
+                ErrorsBag.ReportIllegalCharacterError(illegalChar, posStart, _position);
                 break;
         }
 
-        var tokenLength = _pos.Index - _start;
-        var tokenText = _tokenKind.GetText() ?? _source.Substring(_start, tokenLength);
+        var tokenLength = _position.Index - _start;
+        var tokenText = _tokenKind.GetText() ?? _source.Text.Substring(_start, tokenLength);
 
         return new Token(_tokenKind, tokenText, _tokenValue);
     }
@@ -112,7 +109,7 @@ public sealed class Lexer
 
     private void MakeNumberToken()
     {
-        var start = _pos.Clone();
+        var start = _position.Clone();
         var dotCount = 0;
 
         while (char.IsDigit(Current) || Current == ',')
@@ -121,15 +118,13 @@ public sealed class Lexer
             Advance();
         }
 
-        var numberLength = _pos.Index - _start;
-        var numberText = _source.Substring(_start, numberLength);
+        var numberLength = _position.Index - _start;
+        var numberText = _source.Text.Substring(_start, numberLength);
         switch (dotCount)
         {
             case > 1:
             {
-                var invalidNumberError =
-                    new InvalidNumberError($"Decimals can't have more than one coma: {numberText}", start, _pos);
-                _errors.Add(invalidNumberError);
+                ErrorsBag.ReportInvalidNumberError("Decimals can't have more than one coma", start, _position);
                 _tokenKind = TokenKind.BadToken;
                 return;
             }
@@ -139,8 +134,7 @@ public sealed class Lexer
                 break;
             case 0:
             {
-                var invalidNumberError = new InvalidNumberError($"{numberText} is not a valid Int32", start, _pos);
-                _errors.Add(invalidNumberError);
+                ErrorsBag.ReportInvalidNumberError($"{numberText} is not a valid Int32", start, _position);
                 _tokenKind = TokenKind.BadToken;
                 break;
             }
@@ -153,8 +147,7 @@ public sealed class Lexer
                 }
                 else
                 {
-                    var invalidNumberError = new InvalidNumberError($"{numberText} is not a valid double", start, _pos);
-                    _errors.Add(invalidNumberError);
+                    ErrorsBag.ReportInvalidNumberError($"{numberText} is not a valid double", start, _position);
                     _tokenKind = TokenKind.BadToken;
                 }
 
@@ -165,14 +158,14 @@ public sealed class Lexer
 
     private void Advance()
     {
-        _pos.Advance(Current);
+        _position.Advance(Current);
     }
 
     private char Peek(int offset = 0)
     {
-        var index = _pos.Index + offset;
-        return index >= _source.Length
+        var index = _position.Index + offset;
+        return index >= _source.Text.Length
             ? '\0'
-            : _source[index];
+            : _source.Text[index];
     }
 }
