@@ -102,7 +102,7 @@ internal sealed class Lexer
         var tokenLength = _position.Index - _start;
         var tokenText = _tokenKind.GetText() ?? _source.Text.Substring(_start, tokenLength);
 
-        return new Token(_tokenKind, tokenText, _tokenValue, posStart, _position);
+        return new Token(_tokenKind, tokenText, posStart, _position, _tokenValue);
     }
 
     private void MakeWhiteSpaceToken()
