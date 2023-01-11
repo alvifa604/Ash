@@ -54,6 +54,8 @@ internal sealed class Interpreter
         var @operator = unary.OperatorToken;
         var expression = Visit(unary.Expression);
 
+        if (expression is null) return null;
+
         switch (expression)
         {
             case int:
@@ -75,6 +77,9 @@ internal sealed class Interpreter
     {
         var left = Visit(binary.Left);
         var right = Visit(binary.Right);
+
+        if (left is null || right is null)
+            return null;
 
         if (left is (double or int) && right is (double or int))
         {
