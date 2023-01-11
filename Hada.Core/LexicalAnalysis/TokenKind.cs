@@ -18,6 +18,7 @@ public enum TokenKind
 
     // Expressions
     NumberExpression,
+    UnaryExpression,
     BinaryExpression,
     ParenthesizedExpression
 }

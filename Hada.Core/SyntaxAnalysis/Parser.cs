@@ -53,8 +53,16 @@ internal sealed class Parser
         {
             TokenKind.IntegerToken or TokenKind.DoubleToken => ParseNumberExpression(),
             TokenKind.OpenParenthesisToken => ParseParenthesizedExpression(),
+            TokenKind.PlusToken or TokenKind.MinusToken => ParseUnaryExpression(),
             _ => ParseLiteralExpression()
         };
+    }
+
+    private Expression ParseUnaryExpression()
+    {
+        var operatorToken = NextToken();
+        var expression = ParseExpression();
+        return new UnaryExpression(operatorToken, expression);
     }
 
     private Expression ParseParenthesizedExpression()
@@ -99,30 +107,4 @@ internal sealed class Parser
             Current.End!);
         return new Token(kind, Current.Text, "");
     }
-}
-
-internal class LiteralExpression : Expression
-{
-    private readonly Token _literalToken;
-
-    public LiteralExpression(Token literalToken)
-    {
-        _literalToken = literalToken;
-    }
-
-    public override TokenKind Kind { get; }
-}
-
-public sealed class SyntaxTree
-{
-    public SyntaxTree(Expression? root, ErrorsBag errorsBag, Token endOfFileToken)
-    {
-        Root = root;
-        ErrorsBag = errorsBag;
-        EndOfFileToken = endOfFileToken;
-    }
-
-    public Expression? Root { get; }
-    public ErrorsBag ErrorsBag { get; }
-    public Token EndOfFileToken { get; }
 }
