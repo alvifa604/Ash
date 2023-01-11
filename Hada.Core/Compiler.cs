@@ -1,3 +1,4 @@
+using Hada.Core.Interpretation;
 using Hada.Core.LexicalAnalysis;
 using Hada.Core.SyntaxAnalysis;
 using Hada.Core.SyntaxAnalysis.Expressions;
@@ -14,12 +15,16 @@ public sealed class Compiler
         _sourceText = new SourceText(text, "Example.hada");
     }
 
-    public SyntaxTree? Run()
+    public object? Run()
     {
         var tokens = SetTokens();
-        return tokens.Length == 0
+        var tree = tokens.Length == 0
             ? null
             : SetSyntaxTree(tokens);
+
+        return tree is null
+            ? null
+            : new Interpreter(tree).Interpret();
     }
 
     private SyntaxTree? SetSyntaxTree(Token[] tokens)
