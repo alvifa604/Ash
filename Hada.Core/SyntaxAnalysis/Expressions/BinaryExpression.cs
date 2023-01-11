@@ -4,21 +4,22 @@ namespace Hada.Core.SyntaxAnalysis.Expressions;
 
 public sealed class BinaryExpression : Expression
 {
+    public Expression Left { get; }
+    public Token OperatorToken { get; }
+    public Expression Right { get; }
     public override TokenKind Kind => TokenKind.BinaryExpression;
-    private readonly Expression _left;
-    private readonly Token _operatorToken;
-    private readonly Expression _right;
+
 
     public BinaryExpression(Expression left, Token operatorToken, Expression right)
     {
-        _left = left;
-        _operatorToken = operatorToken;
-        _right = right;
+        Left = left;
+        OperatorToken = operatorToken;
+        Right = right;
     }
 
     public override string ToString()
     {
-        return $"({_left} {_operatorToken} {_right})";
+        return $"({Left} {OperatorToken} {Right})";
     }
 }
 
