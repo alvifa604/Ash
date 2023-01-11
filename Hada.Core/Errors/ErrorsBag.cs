@@ -58,7 +58,7 @@ public sealed class ErrorsBag : IEnumerable<Error>
     }
 
 
-    public void WriteErrors(SourceText source)
+    public void WriteErrorsInFile(SourceText source)
     {
         var fileName = $"/Users/alberto/Desktop/C#/Hada/Samples/{source.FileName}-Errors.txt";
         var file = File.Create(fileName);
@@ -105,18 +105,4 @@ public sealed class ErrorsBag : IEnumerable<Error>
     {
         return GetEnumerator();
     }
-
-    public object ReportInvalidExpression()
-    {
-        throw new NotImplementedException();
-    }
-}
-
-public class InvalidUnaryOperatorError : Error
-{
-    public InvalidUnaryOperatorError(string message, Position start, Position end) : base(message, start, end)
-    {
-    }
-
-    public override ErrorType ErrorType => ErrorType.InvalidUnaryOperator;
 }
