@@ -14,7 +14,7 @@ public sealed class Compiler
         _sourceText = new SourceText(text, "Example.hada");
     }
 
-    public Expression? Run()
+    public SyntaxTree? Run()
     {
         var tokens = SetTokens();
         return tokens.Length == 0
@@ -22,21 +22,21 @@ public sealed class Compiler
             : SetSyntaxTree(tokens);
     }
 
-    private Expression? SetSyntaxTree(Token[] tokens)
+    private SyntaxTree? SetSyntaxTree(Token[] tokens)
     {
         var parser = new Parser(tokens);
-        var expression = parser.Parse();
-        if (!parser.ErrorsBag.Any())
-            return expression;
+        var tree = parser.Parse();
+        if (!tree.ErrorsBag.Any())
+            return tree;
 
-        parser.ErrorsBag.WriteErrors(_sourceText);
+        tree.ErrorsBag.WriteErrors(_sourceText);
         return null;
     }
 
     private Token[] SetTokens()
     {
         var lexer = new Lexer(_sourceText);
-        var tokens = lexer.GenerateTokens().ToArray();
+        var tokens = lexer.GenerateTokens();
         if (!lexer.ErrorsBag.Any())
             return tokens;
 
