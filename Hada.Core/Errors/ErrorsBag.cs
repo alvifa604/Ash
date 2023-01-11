@@ -30,9 +30,10 @@ public sealed class ErrorsBag : IEnumerable<Error>
         _errors.Add(error);
     }
 
-    public void ReportUnexpectedToken(string message, Position start, Position end)
+    public void ReportInvalidSyntax(string message, Position start, Position end)
     {
-        throw new NotImplementedException();
+        var error = new InvalidSyntaxError(message, start, end);
+        _errors.Add(error);
     }
 
     public void WriteErrors(SourceText source)
