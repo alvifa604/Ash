@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Text;
+using Hada.Core.Interpretation;
 using Hada.Core.LexicalAnalysis;
 using Hada.Core.Text;
 
@@ -47,6 +48,12 @@ public sealed class ErrorsBag : IEnumerable<Error>
     {
         var message = $"'{op}' is not a valid operator for types '{t1.Name}' and '{t2.Name}'";
         var error = new InvalidBinaryOperatorError(message, start, end);
+        _errors.Add(error);
+    }
+
+    public void ReportRunTimeError(string message, Context context, Position start, Position end)
+    {
+        var error = new RunTimeError(message, start, end, context);
         _errors.Add(error);
     }
 

@@ -14,5 +14,6 @@ public enum ErrorType
     InvalidUnaryOperator = 302,
 
     // Runtime errors
-    DivisionByZero = 401
+    RunTime = 401,
+    DivisionByZero = 402
 }

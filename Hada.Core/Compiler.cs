@@ -30,12 +30,13 @@ public sealed class Compiler
 
     private InterpreterResult? SetInterpreterResult(SyntaxTree tree)
     {
-        var result = new Interpreter(tree).Interpret();
+        var context = new Context("main");
+        var result = new Interpreter(tree, context).Interpret();
 
         if (result.Result is not null)
             return result;
 
-        PrintErrorsInConsole(result.ErrorsBag);
+        //PrintErrorsInConsole(result.ErrorsBag);
         result.ErrorsBag.WriteErrorsInFile(_sourceText);
         return null;
     }
@@ -47,7 +48,7 @@ public sealed class Compiler
         if (!tree.ErrorsBag.Any())
             return tree;
 
-        PrintErrorsInConsole(tree.ErrorsBag);
+        //PrintErrorsInConsole(tree.ErrorsBag);
         tree.ErrorsBag.WriteErrorsInFile(_sourceText);
         return null;
     }
@@ -59,7 +60,7 @@ public sealed class Compiler
         if (!lexer.ErrorsBag.Any())
             return tokens;
 
-        PrintErrorsInConsole(lexer.ErrorsBag);
+        //PrintErrorsInConsole(lexer.ErrorsBag);
         lexer.ErrorsBag.WriteErrorsInFile(_sourceText);
         return Array.Empty<Token>();
     }

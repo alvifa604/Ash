@@ -7,11 +7,13 @@ namespace Hada.Core.Interpretation;
 
 internal sealed class Interpreter
 {
+    private readonly Context _context;
     private readonly SyntaxTree _tree;
     private readonly ErrorsBag _errorsBag = new();
 
-    public Interpreter(SyntaxTree tree)
+    public Interpreter(SyntaxTree tree, Context context)
     {
+        _context = context;
         _tree = tree;
     }
 
@@ -100,7 +102,8 @@ internal sealed class Interpreter
                 case TokenKind.DivisionToken:
                     if (r == 0)
                     {
-                        _errorsBag.ReportDivisionByZero(binary.Right.Start, binary.Right.End);
+                        _errorsBag.ReportRunTimeError("Division by zero is not allowed", _context, binary.Right.Start,
+                            binary.Right.End);
                         return null;
                     }
 
