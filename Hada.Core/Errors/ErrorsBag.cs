@@ -36,6 +36,28 @@ public sealed class ErrorsBag : IEnumerable<Error>
         _errors.Add(error);
     }
 
+    public void ReportInvalidUnaryOperator(string op, Type t1, Position start, Position end)
+    {
+        var message = $"'{op}' is not a valid unary operator for type '{t1}'.";
+        var error = new InvalidUnaryOperatorError(message, start, end);
+        _errors.Add(error);
+    }
+
+    public void ReportInvalidBinaryOperator(string op, Type t1, Type t2, Position start, Position end)
+    {
+        var message = $"'{op}' is not a valid operator for types '{t1.Name}' and '{t2.Name}'";
+        var error = new InvalidBinaryOperatorError(message, start, end);
+        _errors.Add(error);
+    }
+
+    public void ReportDivisionByZero(Position start, Position end)
+    {
+        var message = "Division by zero is not allowed";
+        var error = new DivisionByZeroError(message, start, end);
+        _errors.Add(error);
+    }
+
+
     public void WriteErrors(SourceText source)
     {
         var fileName = $"/Users/alberto/Desktop/C#/Hada/Samples/{source.FileName}-Errors.txt";
@@ -83,4 +105,18 @@ public sealed class ErrorsBag : IEnumerable<Error>
     {
         return GetEnumerator();
     }
+
+    public object ReportInvalidExpression()
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class InvalidUnaryOperatorError : Error
+{
+    public InvalidUnaryOperatorError(string message, Position start, Position end) : base(message, start, end)
+    {
+    }
+
+    public override ErrorType ErrorType => ErrorType.InvalidUnaryOperator;
 }
