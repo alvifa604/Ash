@@ -1,5 +1,7 @@
-﻿using Hada.Core.Errors;
+﻿using Hada.Core;
+using Hada.Core.Errors;
 using Hada.Core.LexicalAnalysis;
+using Hada.Core.SyntaxAnalysis;
 using Hada.Core.Text;
 
 namespace Hada.Entry;
@@ -8,7 +10,25 @@ public static class Program
 {
     public static void Main(string[] args)
     {
-        while (true)
+        const string path = "/Users/alberto/Desktop/C#/Hada/Samples/Example.hada";
+        var text = File.ReadAllText(path);
+        if (string.IsNullOrEmpty(text)) return;
+
+        var compiler = new Compiler(text);
+        var tree = compiler.Run();
+        if (tree is null)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            Console.WriteLine("Compilation failed!");
+            Console.ResetColor();
+            return;
+        }
+
+        Console.WriteLine(tree.Root);
+    }
+
+
+    /*while (true)
         {
             Console.WriteLine("Use file? (y/n)");
             var answer = Console.ReadLine();
@@ -44,37 +64,10 @@ public static class Program
                     break;
                 default:
                     continue;
-            }
-
-            if (string.IsNullOrEmpty(text))
-                continue;
-
-            var source = new SourceText(text, fileName);
-            var lexerResult = RunLexer(source);
-            if (lexerResult.errors.Any())
-            {
-                lexerResult.errors.WriteErrors(source);
-                Console.WriteLine("Errors written");
-            }
-            else
-            {
-                foreach (var token in lexerResult.tokens)
-                    Console.WriteLine(token.ToString());
-            }
-        }
-    }
-
+            }*/
 
     private static bool IsValidExtension(string path)
     {
         return Path.GetExtension(path) == ".hada";
-    }
-
-    private static (Token[] tokens, ErrorsBag errors) RunLexer(SourceText source)
-    {
-        var lexer = new Lexer(source);
-        var tokens = lexer.GenerateTokens().ToArray();
-        var errors = lexer.ErrorsBag;
-        return (tokens, errors);
     }
 }
