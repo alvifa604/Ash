@@ -25,19 +25,23 @@ internal sealed class Lexer
         _position = new Position(1, 0, 0, source.FileName, source.Text);
     }
 
-    public IEnumerable<Token> GenerateTokens()
+    public Token[] GenerateTokens()
     {
+        var tokens = new List<Token>();
         Token token;
         do
         {
             token = NextToken();
             if (token.Kind is not (TokenKind.WhiteSpaceToken or TokenKind.BadToken))
-                yield return token;
+                tokens.Add(token);
         } while (token.Kind is not TokenKind.EndOfFileToken);
+
+        return tokens.ToArray();
     }
 
     private Token NextToken()
     {
+        var posStart = _position.Clone();
         _start = _position.Index;
         _tokenKind = TokenKind.BadToken;
         _tokenValue = null;
@@ -89,7 +93,6 @@ internal sealed class Lexer
                 Advance();
                 break;
             default:
-                var posStart = _position.Clone();
                 var illegalChar = Current;
                 Advance();
                 ErrorsBag.ReportIllegalCharacterError(illegalChar, posStart, _position);
@@ -99,7 +102,7 @@ internal sealed class Lexer
         var tokenLength = _position.Index - _start;
         var tokenText = _tokenKind.GetText() ?? _source.Text.Substring(_start, tokenLength);
 
-        return new Token(_tokenKind, tokenText, _tokenValue);
+        return new Token(_tokenKind, tokenText, _tokenValue, posStart, _position);
     }
 
     private void MakeWhiteSpaceToken()
