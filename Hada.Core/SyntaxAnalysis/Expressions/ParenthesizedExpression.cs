@@ -8,13 +8,21 @@ public class ParenthesizedExpression : Expression
     public Expression Expression { get; }
     public Token CloseParenthesisToken { get; }
     public override TokenKind Kind => TokenKind.ParenthesizedExpression;
+    public override Position Start { get; }
+    public override Position End { get; }
 
-    public ParenthesizedExpression(Token openParenthesisToken, Expression expression, Token closeParenthesisToken)
+    public ParenthesizedExpression(Token openParenthesisToken, Expression expression, Token closeParenthesisToken,
+        Position start, Position end)
     {
         OpenParenthesisToken = openParenthesisToken;
         Expression = expression;
         CloseParenthesisToken = closeParenthesisToken;
+        Start = start;
+        End = end;
     }
-    
-    public override string ToString() => $"({Expression})";
+
+    public override string ToString()
+    {
+        return $"({Expression})";
+    }
 }
