@@ -15,8 +15,9 @@ public static class Program
         if (string.IsNullOrEmpty(text)) return;
 
         var compiler = new Compiler(text);
-        var tree = compiler.Run();
-        if (tree is null)
+
+        var interpreterResult = compiler.Run();
+        if (interpreterResult is null)
         {
             Console.ForegroundColor = ConsoleColor.DarkRed;
             Console.WriteLine("Compilation failed!");
@@ -24,7 +25,8 @@ public static class Program
             return;
         }
 
-        Console.WriteLine(tree.Root);
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine(interpreterResult.Result);
     }
 
 

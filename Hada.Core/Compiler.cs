@@ -15,7 +15,7 @@ public sealed class Compiler
         _sourceText = new SourceText(text, "Example.hada");
     }
 
-    public object? Run()
+    public InterpreterResult? Run()
     {
         var tokens = SetTokens();
         var tree = tokens.Length == 0
@@ -24,7 +24,22 @@ public sealed class Compiler
 
         return tree is null
             ? null
-            : new Interpreter(tree).Interpret();
+            : SetInterpreterResult(tree);
+    }
+
+    private InterpreterResult? SetInterpreterResult(SyntaxTree tree)
+    {
+        var result = new Interpreter(tree).Interpret();
+
+        if (result.Result is not null)
+            return result;
+
+        Console.WriteLine(_sourceText.Text);
+        foreach (var error in result.ErrorsBag)
+            Console.WriteLine(error);
+
+        result.ErrorsBag.WriteErrors(_sourceText);
+        return null;
     }
 
     private SyntaxTree? SetSyntaxTree(Token[] tokens)
@@ -33,6 +48,9 @@ public sealed class Compiler
         var tree = parser.Parse();
         if (!tree.ErrorsBag.Any())
             return tree;
+
+        foreach (var error in tree.ErrorsBag)
+            Console.WriteLine(error);
 
         tree.ErrorsBag.WriteErrors(_sourceText);
         return null;
@@ -44,6 +62,9 @@ public sealed class Compiler
         var tokens = lexer.GenerateTokens();
         if (!lexer.ErrorsBag.Any())
             return tokens;
+
+        foreach (var error in lexer.ErrorsBag)
+            Console.WriteLine(error);
 
         lexer.ErrorsBag.WriteErrors(_sourceText);
         return Array.Empty<Token>();
