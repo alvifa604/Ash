@@ -10,18 +10,18 @@ internal sealed class Parser
     private readonly Token[] _tokens;
     private int _position;
 
-    private Token Current => _tokens[_position];
+    private Token Current => Peek();
 
     public Parser(Token[] tokens)
     {
         _tokens = tokens;
-        var endOfFileToken = _tokens.Last();
-        //MatchToken(TokenKind.EndOfFileToken);
     }
 
-    public Expression Parse()
+    public SyntaxTree Parse()
     {
-        return ParseExpression();
+        var root = ParseExpression();
+        var endOfFileToken = MatchToken(TokenKind.EndOfFileToken);
+        return new SyntaxTree(root, ErrorsBag, endOfFileToken);
     }
 
     private Expression ParseExpression()
@@ -47,15 +47,41 @@ internal sealed class Parser
         return left;
     }
 
-    private Expression ParseFactor()
+    private Expression? ParseFactor()
     {
-        if (Current.Kind is TokenKind.IntegerToken or TokenKind.DoubleToken)
+        return Current.Kind switch
         {
-            var numberToken = NextToken();
-            return new NumberExpression(numberToken);
-        }
+            TokenKind.IntegerToken or TokenKind.DoubleToken => ParseNumberExpression(),
+            TokenKind.OpenParenthesisToken => ParseParenthesizedExpression(),
+            _ => ParseLiteralExpression()
+        };
+    }
 
-        return null;
+    private Expression ParseParenthesizedExpression()
+    {
+        var openParenthesisToken = MatchToken(TokenKind.OpenParenthesisToken);
+        var expression = ParseExpression();
+        var closeParenthesisToken = MatchToken(TokenKind.CloseParenthesisToken);
+        return new ParenthesizedExpression(openParenthesisToken, expression, closeParenthesisToken);
+    }
+
+    private Expression ParseLiteralExpression()
+    {
+        var literalToken = MatchToken(TokenKind.IdentifierToken);
+        return new LiteralExpression(literalToken);
+    }
+
+    private Expression ParseNumberExpression()
+    {
+        var numberToken = NextToken();
+        return new NumberExpression(numberToken);
+    }
+
+    private Token Peek()
+    {
+        return _position < _tokens.Length
+            ? _tokens[_position]
+            : _tokens.Last();
     }
 
     private Token NextToken()
@@ -65,11 +91,38 @@ internal sealed class Parser
         return current;
     }
 
-    /*private Token MatchToken(TokenKind kind)
+    private Token MatchToken(TokenKind kind)
     {
         if (Current.Kind == kind) return NextToken();
 
-        ErrorsBag.ReportUnexpectedToken($"UnexpectedToken {Current.Kind} expected {kind}", Current.);
-        return new Token(kind, Current.Position, "", null);
-    }*/
+        ErrorsBag.ReportInvalidSyntax($"Expected token of kind {kind}, but found {Current.Kind}", Current.Start!,
+            Current.End!);
+        return new Token(kind, Current.Text, "");
+    }
+}
+
+internal class LiteralExpression : Expression
+{
+    private readonly Token _literalToken;
+
+    public LiteralExpression(Token literalToken)
+    {
+        _literalToken = literalToken;
+    }
+
+    public override TokenKind Kind { get; }
+}
+
+public sealed class SyntaxTree
+{
+    public SyntaxTree(Expression? root, ErrorsBag errorsBag, Token endOfFileToken)
+    {
+        Root = root;
+        ErrorsBag = errorsBag;
+        EndOfFileToken = endOfFileToken;
+    }
+
+    public Expression? Root { get; }
+    public ErrorsBag ErrorsBag { get; }
+    public Token EndOfFileToken { get; }
 }

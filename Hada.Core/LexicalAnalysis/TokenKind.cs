@@ -5,6 +5,7 @@ public enum TokenKind
     // Tokens
     IntegerToken,
     DoubleToken,
+    IdentifierToken,
     PlusToken,
     MinusToken,
     MultiplicationToken,
@@ -17,5 +18,6 @@ public enum TokenKind
 
     // Expressions
     NumberExpression,
-    BinaryExpression
+    BinaryExpression,
+    ParenthesizedExpression
 }
