@@ -1,3 +1,4 @@
+using Hada.Core.Errors;
 using Hada.Core.Interpretation;
 using Hada.Core.LexicalAnalysis;
 using Hada.Core.SyntaxAnalysis;
@@ -34,11 +35,8 @@ public sealed class Compiler
         if (result.Result is not null)
             return result;
 
-        Console.WriteLine(_sourceText.Text);
-        foreach (var error in result.ErrorsBag)
-            Console.WriteLine(error);
-
-        result.ErrorsBag.WriteErrors(_sourceText);
+        PrintErrorsInConsole(result.ErrorsBag);
+        result.ErrorsBag.WriteErrorsInFile(_sourceText);
         return null;
     }
 
@@ -49,10 +47,8 @@ public sealed class Compiler
         if (!tree.ErrorsBag.Any())
             return tree;
 
-        foreach (var error in tree.ErrorsBag)
-            Console.WriteLine(error);
-
-        tree.ErrorsBag.WriteErrors(_sourceText);
+        PrintErrorsInConsole(tree.ErrorsBag);
+        tree.ErrorsBag.WriteErrorsInFile(_sourceText);
         return null;
     }
 
@@ -63,10 +59,21 @@ public sealed class Compiler
         if (!lexer.ErrorsBag.Any())
             return tokens;
 
-        foreach (var error in lexer.ErrorsBag)
-            Console.WriteLine(error);
-
-        lexer.ErrorsBag.WriteErrors(_sourceText);
+        PrintErrorsInConsole(lexer.ErrorsBag);
+        lexer.ErrorsBag.WriteErrorsInFile(_sourceText);
         return Array.Empty<Token>();
+    }
+
+    private void PrintErrorsInConsole(ErrorsBag errors)
+    {
+        Console.WriteLine(_sourceText.Text);
+        foreach (var error in errors)
+        {
+            Console.Write($"{error}: ");
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            Console.Write($"<<{error.ErrorSource}>>");
+            Console.ResetColor();
+            Console.WriteLine();
+        }
     }
 }
