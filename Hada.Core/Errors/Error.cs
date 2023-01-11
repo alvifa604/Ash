@@ -5,6 +5,7 @@ namespace Hada.Core.Errors;
 public abstract class Error
 {
     public string Message { get; }
+    public string ErrorSource { get; }
     public Position PosStart { get; }
     public Position PosEnd { get; }
     public abstract ErrorType ErrorType { get; }
@@ -14,6 +15,11 @@ public abstract class Error
         Message = message;
         PosStart = posStart;
         PosEnd = posEnd;
+
+        var errorLength = PosEnd.Line == PosStart.Line
+            ? PosEnd.Column - PosStart.Column
+            : posStart.Source.Length - PosStart.Column;
+        ErrorSource = posStart.Source.Substring(PosStart.Column, errorLength);
     }
 
     public override string ToString()
