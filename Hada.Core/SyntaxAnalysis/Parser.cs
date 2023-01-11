@@ -6,7 +6,7 @@ namespace Hada.Core.SyntaxAnalysis;
 
 internal sealed class Parser
 {
-    public ErrorsBag ErrorsBag { get; } = new();
+    private ErrorsBag ErrorsBag { get; } = new();
     private readonly Token[] _tokens;
     private int _position;
 
@@ -47,7 +47,7 @@ internal sealed class Parser
         return left;
     }
 
-    private Expression? ParseFactor()
+    private Expression ParseFactor()
     {
         return Current.Kind switch
         {
@@ -61,7 +61,7 @@ internal sealed class Parser
     private Expression ParseUnaryExpression()
     {
         var operatorToken = NextToken();
-        var expression = ParseExpression();
+        var expression = ParseFactor();
         return new UnaryExpression(operatorToken, expression);
     }
 
