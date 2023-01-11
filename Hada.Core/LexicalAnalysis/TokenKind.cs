@@ -20,5 +20,6 @@ public enum TokenKind
     NumberExpression,
     UnaryExpression,
     BinaryExpression,
-    ParenthesizedExpression
+    ParenthesizedExpression,
+    ExponentiationToken
 }

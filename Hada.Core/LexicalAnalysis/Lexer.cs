@@ -80,6 +80,10 @@ internal sealed class Lexer
                 _tokenKind = TokenKind.MultiplicationToken;
                 Advance();
                 break;
+            case '^':
+                _tokenKind = TokenKind.ExponentiationToken;
+                Advance();
+                break;
             case '/':
                 _tokenKind = TokenKind.DivisionToken;
                 Advance();
