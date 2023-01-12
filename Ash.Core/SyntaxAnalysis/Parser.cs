@@ -88,11 +88,19 @@ internal sealed class Parser
     {
         return Current.Kind switch
         {
-            TokenKind.IntegerToken or TokenKind.DoubleToken => ParseNumberExpression(),
+            TokenKind.IntegerToken or TokenKind.DoubleToken => ParseLiteralExpression(),
+            TokenKind.TrueKeyword or TokenKind.FalseKeyword => ParseBoolean(),
             TokenKind.OpenParenthesisToken => ParseParenthesizedExpression(),
             TokenKind.PlusToken or TokenKind.MinusToken => ParseUnaryExpression(),
             _ => ParseVariableExpression()
         };
+    }
+
+    private Expression ParseBoolean()
+    {
+        var booleanToken = NextToken();
+        var value = booleanToken.Kind == TokenKind.TrueKeyword;
+        return new LiteralExpression(booleanToken, booleanToken.Start, booleanToken.End, value);
     }
 
     private Expression ParseUnaryExpression()
@@ -116,10 +124,10 @@ internal sealed class Parser
         return new VariableExpression(variableToken, variableToken.Start, variableToken.End);
     }
 
-    private Expression ParseNumberExpression()
+    private Expression ParseLiteralExpression()
     {
-        var numberToken = NextToken();
-        return new NumberExpression(numberToken, numberToken.Start, numberToken.End);
+        var literalToken = NextToken();
+        return new LiteralExpression(literalToken, literalToken.Start, literalToken.End);
     }
 
     private Token Peek(int offset = 0)
