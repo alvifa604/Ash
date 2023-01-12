@@ -20,12 +20,13 @@ public enum TokenKind
     BadToken,
 
     // Expressions
-    NumberExpression,
+    LiteralExpression,
     UnaryExpression,
     BinaryExpression,
     ParenthesizedExpression,
     AssignmentExpression,
     ReAssignmentExpression,
+    VariableExpression,
 
     // Keywords
     LetKeyword,
