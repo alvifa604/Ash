@@ -29,8 +29,6 @@ public enum TokenKind
 
     // Keywords
     LetKeyword,
-    IntegerKeyword,
-    DoubleKeyword,
     TrueKeyword,
     FalseKeyword
 }
