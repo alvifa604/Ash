@@ -8,15 +8,17 @@ namespace Ash.Core;
 
 public sealed class Compiler
 {
-    private readonly SourceText _sourceText;
+    private readonly Context _context;
+    private SourceText _sourceText = new("", "");
 
-    public Compiler(string text)
+    public Compiler()
     {
-        _sourceText = new SourceText(text, "Example.hada");
+        _context = new Context("main");
     }
 
-    public InterpreterResult? Run()
+    public InterpreterResult? Run(string text)
     {
+        _sourceText = new SourceText(text, "Example.hada");
         var tokens = SetTokens();
         var tree = tokens.Length == 0
             ? null
@@ -29,13 +31,12 @@ public sealed class Compiler
 
     private InterpreterResult? SetInterpreterResult(SyntaxTree tree)
     {
-        var context = new Context("main");
-        var result = new Interpreter(tree, context).Interpret();
+        var result = new Interpreter(tree, _context).Interpret();
 
         if (result.Result is not null)
             return result;
 
-        //PrintErrorsInConsole(result.ErrorsBag);
+        PrintErrorsInConsole(result.ErrorsBag);
         result.ErrorsBag.WriteErrorsInFile(_sourceText);
         return null;
     }
@@ -47,7 +48,7 @@ public sealed class Compiler
         if (!tree.ErrorsBag.Any())
             return tree;
 
-        //PrintErrorsInConsole(tree.ErrorsBag);
+        PrintErrorsInConsole(tree.ErrorsBag);
         tree.ErrorsBag.WriteErrorsInFile(_sourceText);
         return null;
     }
@@ -59,7 +60,7 @@ public sealed class Compiler
         if (!lexer.ErrorsBag.Any())
             return tokens;
 
-        //PrintErrorsInConsole(lexer.ErrorsBag);
+        PrintErrorsInConsole(lexer.ErrorsBag);
         lexer.ErrorsBag.WriteErrorsInFile(_sourceText);
         return Array.Empty<Token>();
     }
@@ -69,9 +70,9 @@ public sealed class Compiler
         Console.WriteLine(_sourceText.Text);
         foreach (var error in errors)
         {
-            Console.Write($"{error}: ");
+            Console.Write($"{error}");
             Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.Write($"<<{error.ErrorSource}>>");
+            //Console.Write($"Error: '{error.ErrorSource}'");
             Console.ResetColor();
             Console.WriteLine();
         }
