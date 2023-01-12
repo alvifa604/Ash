@@ -4,7 +4,7 @@ namespace Ash.Core.SyntaxAnalysis.Expressions;
 
 public class VariableExpression : Expression
 {
-    public override TokenKind Kind { get; }
+    public override TokenKind Kind => TokenKind.VariableExpression;
     public Token IdentifierToken { get; }
     public override Position Start { get; }
     public override Position End { get; }
