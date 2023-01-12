@@ -2,7 +2,7 @@ using Ash.Core.Errors;
 
 namespace Ash.Core.Interpretation;
 
-public class InterpreterResult
+public sealed class InterpreterResult
 {
     public object? Result { get; }
     public ErrorsBag ErrorsBag { get; }
