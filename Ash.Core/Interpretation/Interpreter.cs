@@ -49,6 +49,19 @@ internal sealed class Interpreter
         }
 
         var value = Visit(reAssignment.Expression);
+
+        var newType = value?.GetType();
+        var prevType = _context.Variables[variableName]?.GetType();
+
+        // Prevents reassignment of different types
+        if (newType != prevType)
+        {
+            _errorsBag.ReportRunTimeError($"Type {newType?.Name} cannot be assigned to type {prevType?.Name}",
+                _context, reAssignment.Start,
+                reAssignment.End);
+            return null;
+        }
+
         _context.Variables[variableName] = value;
         return value;
     }
