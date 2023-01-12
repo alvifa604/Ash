@@ -9,6 +9,7 @@ public enum TokenKind
     PlusToken,
     MinusToken,
     MultiplicationToken,
+    ExponentiationToken,
     DivisionToken,
     OpenParenthesisToken,
     CloseParenthesisToken,
@@ -21,5 +22,4 @@ public enum TokenKind
     UnaryExpression,
     BinaryExpression,
     ParenthesizedExpression,
-    ExponentiationToken
 }

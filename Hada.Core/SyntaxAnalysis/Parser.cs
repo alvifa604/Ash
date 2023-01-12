@@ -19,19 +19,55 @@ internal sealed class Parser
 
     public SyntaxTree Parse()
     {
-        var root = ParseExpression();
+        var root = ParseBinaryExpression();
         var endOfFileToken = MatchToken(TokenKind.EndOfFileToken);
         return new SyntaxTree(root, ErrorsBag, endOfFileToken);
     }
 
     private Expression ParseExpression()
     {
-        return ParseBinaryExpression(ParseTerm, TokenKind.PlusToken, TokenKind.MinusToken);
+        return ParseBinaryExpression();
     }
 
-    private Expression ParseTerm()
+    private Expression ParseBinaryExpression(int parentPriority = 0)
     {
-        return ParseBinaryExpression(ParseFactor, TokenKind.MultiplicationToken, TokenKind.DivisionToken);
+        Expression left;
+        var unaryPriority = Current.Kind.GetUnaryOperatorPriority();
+
+        // If there's an operator before the expression
+        if (unaryPriority != 0 && unaryPriority >= parentPriority)
+        {
+            var operatorToken = NextToken();
+            var expression = ParseBinaryExpression(unaryPriority);
+            left = new UnaryExpression(operatorToken, expression, expression.Start, expression.End);
+        }
+        else
+        {
+            left = ParsePrimaryExpression();
+        }
+
+        while (true)
+        {
+            // Gets the priority of the current operator
+            var binaryPriority = Current.Kind.GetBinaryOperatorPriority();
+            if (binaryPriority == 0 || binaryPriority <= parentPriority) break;
+
+            var operatorToken = NextToken();
+            var right = ParseBinaryExpression(binaryPriority);
+            left = new BinaryExpression(left, operatorToken, right, left.Start, right.End);
+        }
+
+        return left;
+    }
+
+    /*private Expression ParseExpression()
+    {
+        return ParseBinaryExpression(ParseTerm, TokenKind.PlusToken, TokenKind.MinusToken);
+    }*/
+
+    /*private Expression ParseTerm()
+    {
+        return ParseBinaryExpression(ParsePrimaryExpression, TokenKind.MultiplicationToken, TokenKind.DivisionToken);
     }
 
     private Expression ParseBinaryExpression(Func<Expression> func, params TokenKind[] kinds)
@@ -45,9 +81,9 @@ internal sealed class Parser
         }
 
         return left;
-    }
+    }*/
 
-    private Expression ParseFactor()
+    private Expression ParsePrimaryExpression()
     {
         return Current.Kind switch
         {
@@ -61,7 +97,7 @@ internal sealed class Parser
     private Expression ParseUnaryExpression()
     {
         var operatorToken = NextToken();
-        var expression = ParseFactor();
+        var expression = ParsePrimaryExpression();
         return new UnaryExpression(operatorToken, expression, operatorToken.Start, expression.End);
     }
 
