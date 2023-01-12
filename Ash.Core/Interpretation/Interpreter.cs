@@ -132,7 +132,7 @@ internal sealed class Interpreter
             default:
                 _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
                     binary.OperatorToken.Start, binary.OperatorToken.End);
-                return left;
+                return null;
         }
     }
 
