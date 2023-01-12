@@ -39,7 +39,7 @@ public sealed class ErrorsBag : IEnumerable<Error>
 
     public void ReportInvalidUnaryOperator(string op, Type t1, Position start, Position end)
     {
-        var message = $"'{op}' is not a valid unary operator for type '{t1}'.";
+        var message = $"'{op}' is not a valid unary operator for type '{t1}'";
         var error = new InvalidUnaryOperatorError(message, start, end);
         _errors.Add(error);
     }
