@@ -57,14 +57,6 @@ public sealed class ErrorsBag : IEnumerable<Error>
         _errors.Add(error);
     }
 
-    public void ReportDivisionByZero(Position start, Position end)
-    {
-        var message = "Division by zero is not allowed";
-        var error = new DivisionByZeroError(message, start, end);
-        _errors.Add(error);
-    }
-
-
     public void WriteErrorsInFile(SourceText source)
     {
         var fileName = $"/Users/alberto/Desktop/C#/Hada/Samples/{source.FileName}-Errors.txt";
