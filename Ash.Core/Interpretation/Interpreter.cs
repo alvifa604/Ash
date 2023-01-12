@@ -123,51 +123,43 @@ internal sealed class Interpreter
         if (left is null || right is null)
             return null;
 
+        // 
         if (left is (double or int) && right is (double or int))
-        {
-            dynamic l = left;
-            dynamic r = right;
-            var result = l;
-            switch (binary.OperatorToken.Kind)
-            {
-                case TokenKind.PlusToken:
-                    result = l + r;
-                    break;
-                case TokenKind.MinusToken:
-                    result = l - r;
-                    break;
-                case TokenKind.MultiplicationToken:
-                    result = l * r;
-                    break;
-                case TokenKind.ExponentiationToken:
-                    if (l == 0)
-                    {
-                        _errorsBag.ReportRunTimeError("The base cannot be zero", _context, binary.Right.Start,
-                            binary.Right.End);
-                        return null;
-                    }
-
-                    result = Math.Pow(l, r);
-                    break;
-                case TokenKind.DivisionToken:
-                    if (r == 0)
-                    {
-                        _errorsBag.ReportRunTimeError("Division by zero is not allowed", _context, binary.Right.Start,
-                            binary.Right.End);
-                        return null;
-                    }
-
-                    result = (double)l / r;
-                    break;
-            }
-
-            if (result is double res)
-                return Math.Round(res, 10);
-            return result;
-        }
+            return HandleNumbersOperators(left, right, binary);
 
         _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
             binary.OperatorToken.Start, binary.OperatorToken.End);
         return left;
+    }
+
+    private object? HandleNumbersOperators(dynamic left, dynamic right, BinaryExpression binary)
+    {
+        switch (binary.OperatorToken.Kind)
+        {
+            case TokenKind.PlusToken:
+                return left + right;
+            case TokenKind.MinusToken:
+                return left - right;
+            case TokenKind.MultiplicationToken:
+                return left * right;
+            case TokenKind.ExponentiationToken:
+                if (left != 0)
+                    return Math.Pow(left, right);
+                _errorsBag.ReportRunTimeError("The base cannot be zero", _context, binary.Right.Start,
+                    binary.Right.End);
+                return null;
+            case TokenKind.DivisionToken:
+                if (right != 0)
+                    return (double)left / right;
+                _errorsBag.ReportRunTimeError("Division by zero is not allowed", _context, binary.Right.Start,
+                    binary.Right.End);
+                return null;
+            case TokenKind.EqualsToken:
+                return left == right;
+            default:
+                _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
+                    binary.OperatorToken.Start, binary.OperatorToken.End);
+                return null;
+        }
     }
 }
