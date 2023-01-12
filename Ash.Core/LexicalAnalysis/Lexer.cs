@@ -97,8 +97,17 @@ internal sealed class Lexer
                 Advance();
                 break;
             case '=':
-                _tokenKind = TokenKind.EqualsToken;
                 Advance();
+                if (Current == '=')
+                {
+                    _tokenKind = TokenKind.EqualsToken;
+                    Advance();
+                }
+                else
+                {
+                    _tokenKind = TokenKind.AssignmentToken;
+                }
+
                 break;
             default:
                 if (char.IsLetter(Current))

@@ -13,8 +13,8 @@ public enum TokenKind
     OpenParenthesisToken,
     CloseParenthesisToken,
     WhiteSpaceToken,
-    KeywordToken,
     IdentifierToken,
+    AssignmentToken,
     EqualsToken,
     EndOfFileToken,
     BadToken,
@@ -30,5 +30,7 @@ public enum TokenKind
     // Keywords
     LetKeyword,
     IntegerKeyword,
-    DoubleKeyword
+    DoubleKeyword,
+    TrueKeyword,
+    FalseKeyword
 }
