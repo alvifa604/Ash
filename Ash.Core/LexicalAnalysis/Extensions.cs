@@ -21,10 +21,10 @@ public static class Extensions
     {
         return kind switch
         {
-            TokenKind.ExponentiationToken => 6,
-            TokenKind.MultiplicationToken or TokenKind.DivisionToken => 5,
-            TokenKind.PlusToken or TokenKind.MinusToken => 4,
-            TokenKind.EqualsToken => 3,
+            TokenKind.ExponentiationToken => 5,
+            TokenKind.MultiplicationToken or TokenKind.DivisionToken => 4,
+            TokenKind.PlusToken or TokenKind.MinusToken => 3,
+            TokenKind.EqualsToken => 2,
             _ => 0
         };
     }
@@ -33,7 +33,7 @@ public static class Extensions
     {
         return kind switch
         {
-            TokenKind.PlusToken or TokenKind.MinusToken => 7,
+            TokenKind.PlusToken or TokenKind.MinusToken => 6,
             _ => 0
         };
     }
