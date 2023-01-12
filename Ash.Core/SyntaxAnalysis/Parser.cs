@@ -67,7 +67,9 @@ internal sealed class Parser
         }
         else
         {
-            left = ParsePrimaryExpression();
+            left = Current.Kind is TokenKind.LetKeyword
+                ? ParseAssignmentExpression()
+                : ParsePrimaryExpression();
         }
 
         while (true)
