@@ -13,7 +13,11 @@ public sealed class Compiler
 
     public Compiler()
     {
-        _context = new Context("main");
+        var globalSymbolTable = new SymbolTable
+        {
+            ["null"] = 0
+        };
+        _context = new Context("main", globalSymbolTable);
     }
 
     public InterpreterResult? Run(string text)
