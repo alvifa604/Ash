@@ -19,13 +19,37 @@ internal sealed class Parser
 
     public SyntaxTree Parse()
     {
-        var root = ParseBinaryExpression();
+        var root = ParseExpression();
         var endOfFileToken = MatchToken(TokenKind.EndOfFileToken);
         return new SyntaxTree(root, ErrorsBag, endOfFileToken);
     }
 
     private Expression ParseExpression()
     {
+        return ParseAssignmentExpression();
+    }
+
+    private Expression ParseAssignmentExpression()
+    {
+        if (Current.Kind is TokenKind.IdentifierToken && Peek(1).Kind is TokenKind.EqualsToken)
+        {
+            var identifier = MatchToken(TokenKind.IdentifierToken);
+            var equalsToken = MatchToken(TokenKind.EqualsToken);
+            var expression = ParseExpression();
+            return new ReAssignmentExpression(identifier, equalsToken, expression, identifier.Start,
+                expression.End);
+        }
+
+        if (Current.Kind is TokenKind.LetKeyword)
+        {
+            var letToken = MatchToken(TokenKind.LetKeyword);
+            var identifier = MatchToken(TokenKind.IdentifierToken);
+            var equalsToken = MatchToken(TokenKind.EqualsToken);
+            var expression = ParseExpression();
+            return new AssignmentExpression(letToken, identifier, equalsToken, expression, letToken.Start,
+                expression.End);
+        }
+
         return ParseBinaryExpression();
     }
 
@@ -67,7 +91,7 @@ internal sealed class Parser
             TokenKind.IntegerToken or TokenKind.DoubleToken => ParseNumberExpression(),
             TokenKind.OpenParenthesisToken => ParseParenthesizedExpression(),
             TokenKind.PlusToken or TokenKind.MinusToken => ParseUnaryExpression(),
-            _ => ParseLiteralExpression()
+            _ => ParseVariableExpression()
         };
     }
 
@@ -86,10 +110,10 @@ internal sealed class Parser
         return new ParenthesizedExpression(openToken, expression, closeToken, openToken.Start, openToken.End);
     }
 
-    private Expression ParseLiteralExpression()
+    private Expression ParseVariableExpression()
     {
-        var literalToken = MatchToken(TokenKind.IdentifierToken);
-        return new LiteralExpression(literalToken, literalToken.Start, literalToken.End);
+        var variableToken = MatchToken(TokenKind.IdentifierToken);
+        return new VariableExpression(variableToken, variableToken.Start, variableToken.End);
     }
 
     private Expression ParseNumberExpression()
@@ -98,10 +122,11 @@ internal sealed class Parser
         return new NumberExpression(numberToken, numberToken.Start, numberToken.End);
     }
 
-    private Token Peek()
+    private Token Peek(int offset = 0)
     {
-        return _position < _tokens.Length
-            ? _tokens[_position]
+        var index = _position + offset;
+        return index < _tokens.Length
+            ? _tokens[index]
             : _tokens.Last();
     }
 

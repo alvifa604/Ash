@@ -30,15 +30,55 @@ internal sealed class Interpreter
             BinaryExpression binary => VisitBinary(binary),
             UnaryExpression unary => VisitUnary(unary),
             ParenthesizedExpression parenthesized => VisitParenthesized(parenthesized),
-            //LiteralExpression literal => VisitLiteral(literal),
+            AssignmentExpression assignment => VisitAssignment(assignment),
+            ReAssignmentExpression reAssignment => VisitReAssignment(reAssignment),
             NumberExpression number => VisitNumber(number),
-            _ => VisitLiteral(node)
+            _ => VisitVariable((VariableExpression)node)
         };
     }
 
-    private object VisitLiteral(Expression node)
+    private object? VisitReAssignment(ReAssignmentExpression reAssignment)
     {
-        throw new NotImplementedException();
+        var variableName = reAssignment.IdentifierToken.Text;
+        var variableExists = _context.Variables.ContainsKey(variableName);
+        if (!variableExists)
+        {
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, reAssignment.Start,
+                reAssignment.End);
+            return null;
+        }
+
+        var value = Visit(reAssignment.Expression);
+        _context.Variables[variableName] = value;
+        return value;
+    }
+
+    private object? VisitAssignment(AssignmentExpression assignment)
+    {
+        var variableName = assignment.IdentifierToken.Text;
+        var variableExists = _context.Variables.ContainsKey(variableName);
+        if (variableExists)
+        {
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is already defined.", _context,
+                assignment.Start, assignment.End);
+            return null;
+        }
+
+        var value = Visit(assignment.Expression);
+        _context.Variables[variableName] = value;
+        return value;
+    }
+
+    private object? VisitVariable(VariableExpression variable)
+    {
+        var variableName = variable.IdentifierToken.Text;
+        var variableExists = _context.Variables.ContainsKey(variableName);
+        if (variableExists)
+            return _context.Variables[variableName];
+
+        _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, variable.Start,
+            variable.End);
+        return null;
     }
 
     private object? VisitNumber(NumberExpression number)

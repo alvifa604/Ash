@@ -2,16 +2,16 @@ using Ash.Core.LexicalAnalysis;
 
 namespace Ash.Core.SyntaxAnalysis.Expressions;
 
-public class LiteralExpression : Expression
+public class VariableExpression : Expression
 {
     public override TokenKind Kind { get; }
-    public Token LiteralToken { get; }
+    public Token IdentifierToken { get; }
     public override Position Start { get; }
     public override Position End { get; }
 
-    public LiteralExpression(Token literalToken, Position start, Position end)
+    public VariableExpression(Token identifierToken, Position start, Position end)
     {
-        LiteralToken = literalToken;
+        IdentifierToken = identifierToken;
         Start = start;
         End = end;
     }

@@ -24,6 +24,8 @@ public enum TokenKind
     UnaryExpression,
     BinaryExpression,
     ParenthesizedExpression,
+    AssignmentExpression,
+    ReAssignmentExpression,
 
     // Keywords
     LetKeyword,
