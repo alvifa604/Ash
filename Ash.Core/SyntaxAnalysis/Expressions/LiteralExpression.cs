@@ -10,15 +10,15 @@ public class LiteralExpression : Expression
     public override Position End { get; }
     public object? Value { get; }
 
-    public LiteralExpression(Token token, Position start, Position end)
+    public LiteralExpression(Token token, Position start, Position end) : this(token, start, end, token.Value)
+    {
+    }
+
+    public LiteralExpression(Token token, Position start, Position end, object? value)
     {
         Token = token;
         Start = start;
         End = end;
-    }
-
-    public LiteralExpression(Token token, Position start, Position end, object value) : this(token, start, end)
-    {
         Value = value;
     }
 
