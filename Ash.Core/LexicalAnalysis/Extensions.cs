@@ -43,8 +43,6 @@ public static class Extensions
         return text switch
         {
             "let" => TokenKind.LetKeyword,
-            "integer" => TokenKind.IntegerKeyword,
-            "double" => TokenKind.DoubleKeyword,
             "true" => TokenKind.TrueKeyword,
             "false" => TokenKind.FalseKeyword,
             _ => TokenKind.IdentifierToken
