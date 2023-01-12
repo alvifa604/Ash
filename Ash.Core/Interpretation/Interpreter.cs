@@ -32,7 +32,7 @@ internal sealed class Interpreter
             ParenthesizedExpression parenthesized => VisitParenthesized(parenthesized),
             AssignmentExpression assignment => VisitAssignment(assignment),
             ReAssignmentExpression reAssignment => VisitReAssignment(reAssignment),
-            NumberExpression number => VisitNumber(number),
+            LiteralExpression number => VisitLiteral(number),
             _ => VisitVariable((VariableExpression)node)
         };
     }
@@ -81,9 +81,9 @@ internal sealed class Interpreter
         return null;
     }
 
-    private object? VisitNumber(NumberExpression number)
+    private object? VisitLiteral(LiteralExpression literal)
     {
-        return number.Token.Value;
+        return literal.Value;
     }
 
     private object? VisitParenthesized(ParenthesizedExpression parenthesized)
@@ -123,13 +123,30 @@ internal sealed class Interpreter
         if (left is null || right is null)
             return null;
 
-        // 
-        if (left is (double or int) && right is (double or int))
-            return HandleNumbersOperators(left, right, binary);
+        switch (left)
+        {
+            case (double or int) when right is (double or int):
+                return HandleNumbersOperators(left, right, binary);
+            case bool when right is bool:
+                return HandleBooleanOperators(left, right, binary);
+            default:
+                _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
+                    binary.OperatorToken.Start, binary.OperatorToken.End);
+                return left;
+        }
+    }
 
-        _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
-            binary.OperatorToken.Start, binary.OperatorToken.End);
-        return left;
+    private object? HandleBooleanOperators(object left, object right, BinaryExpression binary)
+    {
+        switch (binary.OperatorToken.Kind)
+        {
+            case TokenKind.EqualsToken:
+                return Equals(left, right);
+            default:
+                _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
+                    binary.OperatorToken.Start, binary.OperatorToken.End);
+                return null;
+        }
     }
 
     private object? HandleNumbersOperators(dynamic left, dynamic right, BinaryExpression binary)
