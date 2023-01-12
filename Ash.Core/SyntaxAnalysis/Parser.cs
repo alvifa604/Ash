@@ -31,10 +31,10 @@ internal sealed class Parser
 
     private Expression ParseAssignmentExpression()
     {
-        if (Current.Kind is TokenKind.IdentifierToken && Peek(1).Kind is TokenKind.EqualsToken)
+        if (Current.Kind is TokenKind.IdentifierToken && Peek(1).Kind is TokenKind.AssignmentToken)
         {
             var identifier = MatchToken(TokenKind.IdentifierToken);
-            var equalsToken = MatchToken(TokenKind.EqualsToken);
+            var equalsToken = MatchToken(TokenKind.AssignmentToken);
             var expression = ParseExpression();
             return new ReAssignmentExpression(identifier, equalsToken, expression, identifier.Start,
                 expression.End);
@@ -44,7 +44,7 @@ internal sealed class Parser
         {
             var letToken = MatchToken(TokenKind.LetKeyword);
             var identifier = MatchToken(TokenKind.IdentifierToken);
-            var equalsToken = MatchToken(TokenKind.EqualsToken);
+            var equalsToken = MatchToken(TokenKind.AssignmentToken);
             var expression = ParseExpression();
             return new AssignmentExpression(letToken, identifier, equalsToken, expression, letToken.Start,
                 expression.End);
