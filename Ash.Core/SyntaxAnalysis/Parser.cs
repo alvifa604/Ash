@@ -150,7 +150,7 @@ internal sealed class Parser
         if (Current.Kind == kind) return NextToken();
 
         ErrorsBag.ReportInvalidSyntax($"Expected token of kind {kind}, but found {Current.Kind}", Current.Start!,
-            Current.End!);
+            Current.End);
         return new Token(kind, Current.Text, Current.Start, Current.End, "");
     }
 }
