@@ -99,6 +99,16 @@ internal sealed class Interpreter
                 case TokenKind.MultiplicationToken:
                     result = l * r;
                     break;
+                case TokenKind.ExponentiationToken:
+                    if (l == 0)
+                    {
+                        _errorsBag.ReportRunTimeError("The base cannot be zero", _context, binary.Right.Start,
+                            binary.Right.End);
+                        return null;
+                    }
+
+                    result = Math.Pow(l, r);
+                    break;
                 case TokenKind.DivisionToken:
                     if (r == 0)
                     {
