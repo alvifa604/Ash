@@ -8,6 +8,8 @@ public class Context
     public Context? Parent { get; }
     public Position? ParentPosition { get; }
 
+    public Dictionary<string, object?> Variables { get; } = new();
+
     public Context(string name, Context? parent = null, Position? parentPosition = null)
     {
         Name = name;
