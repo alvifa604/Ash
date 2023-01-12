@@ -40,7 +40,7 @@ internal sealed class Interpreter
     private object? VisitReAssignment(ReAssignmentExpression reAssignment)
     {
         var variableName = reAssignment.IdentifierToken.Text;
-        var variableExists = _context.Variables.ContainsKey(variableName);
+        var variableExists = _context.Symbols[variableName] != null;
         if (!variableExists)
         {
             _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, reAssignment.Start,
@@ -51,7 +51,7 @@ internal sealed class Interpreter
         var value = Visit(reAssignment.Expression);
 
         var newType = value?.GetType();
-        var prevType = _context.Variables[variableName]?.GetType();
+        var prevType = _context.Symbols[variableName]?.GetType();
 
         // Prevents reassignment of different types
         if (newType != prevType)
@@ -62,14 +62,14 @@ internal sealed class Interpreter
             return null;
         }
 
-        _context.Variables[variableName] = value;
+        _context.Symbols[variableName] = value;
         return value;
     }
 
     private object? VisitAssignment(AssignmentExpression assignment)
     {
         var variableName = assignment.IdentifierToken.Text;
-        var variableExists = _context.Variables.ContainsKey(variableName);
+        var variableExists = _context.Symbols[variableName] != null;
         if (variableExists)
         {
             _errorsBag.ReportRunTimeError($"Variable '{variableName}' is already defined.", _context,
@@ -78,16 +78,16 @@ internal sealed class Interpreter
         }
 
         var value = Visit(assignment.Expression);
-        _context.Variables[variableName] = value;
+        _context.Symbols[variableName] = value;
         return value;
     }
 
     private object? VisitVariable(VariableExpression variable)
     {
         var variableName = variable.IdentifierToken.Text;
-        var variableExists = _context.Variables.ContainsKey(variableName);
+        var variableExists = _context.Symbols[variableName] != null;
         if (variableExists)
-            return _context.Variables[variableName];
+            return _context.Symbols[variableName];
 
         _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, variable.Start,
             variable.End);
@@ -125,7 +125,7 @@ internal sealed class Interpreter
         }
 
         _errorsBag.ReportInvalidUnaryOperator(@operator.Text, expression.GetType(), @operator.Start, @operator.End);
-        return expression;
+        return null;
     }
 
     private object? VisitBinary(BinaryExpression binary)
@@ -171,16 +171,16 @@ internal sealed class Interpreter
             case TokenKind.MinusToken:
                 return left - right;
             case TokenKind.MultiplicationToken:
-                return left * right;
+                return Math.Round(left * right, 8);
             case TokenKind.ExponentiationToken:
                 if (left != 0)
-                    return Math.Pow(left, right);
+                    return Math.Round(Math.Pow(left, right), 8);
                 _errorsBag.ReportRunTimeError("The base cannot be zero", _context, binary.Right.Start,
                     binary.Right.End);
                 return null;
             case TokenKind.DivisionToken:
                 if (right != 0)
-                    return (double)left / right;
+                    return Math.Round((double)left / right, 8);
                 _errorsBag.ReportRunTimeError("Division by zero is not allowed", _context, binary.Right.Start,
                     binary.Right.End);
                 return null;
