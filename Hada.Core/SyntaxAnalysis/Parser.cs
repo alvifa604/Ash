@@ -60,29 +60,6 @@ internal sealed class Parser
         return left;
     }
 
-    /*private Expression ParseExpression()
-    {
-        return ParseBinaryExpression(ParseTerm, TokenKind.PlusToken, TokenKind.MinusToken);
-    }*/
-
-    /*private Expression ParseTerm()
-    {
-        return ParseBinaryExpression(ParsePrimaryExpression, TokenKind.MultiplicationToken, TokenKind.DivisionToken);
-    }
-
-    private Expression ParseBinaryExpression(Func<Expression> func, params TokenKind[] kinds)
-    {
-        var left = func();
-        while (kinds.Contains(Current.Kind))
-        {
-            var operatorToken = NextToken();
-            var right = func();
-            left = new BinaryExpression(left, operatorToken, right, left.Start, right.End);
-        }
-
-        return left;
-    }*/
-
     private Expression ParsePrimaryExpression()
     {
         return Current.Kind switch
