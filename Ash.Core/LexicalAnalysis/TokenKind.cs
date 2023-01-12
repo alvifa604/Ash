@@ -1,11 +1,10 @@
-namespace Hada.Core.LexicalAnalysis;
+namespace Ash.Core.LexicalAnalysis;
 
 public enum TokenKind
 {
     // Tokens
     IntegerToken,
     DoubleToken,
-    IdentifierToken,
     PlusToken,
     MinusToken,
     MultiplicationToken,
@@ -14,6 +13,9 @@ public enum TokenKind
     OpenParenthesisToken,
     CloseParenthesisToken,
     WhiteSpaceToken,
+    KeywordToken,
+    IdentifierToken,
+    EqualsToken,
     EndOfFileToken,
     BadToken,
 
@@ -22,4 +24,9 @@ public enum TokenKind
     UnaryExpression,
     BinaryExpression,
     ParenthesizedExpression,
+
+    // Keywords
+    LetKeyword,
+    IntegerKeyword,
+    DoubleKeyword
 }

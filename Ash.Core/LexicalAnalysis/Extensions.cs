@@ -1,4 +1,4 @@
-namespace Hada.Core.LexicalAnalysis;
+namespace Ash.Core.LexicalAnalysis;
 
 public static class Extensions
 {
@@ -12,6 +12,7 @@ public static class Extensions
             TokenKind.DivisionToken => "/",
             TokenKind.OpenParenthesisToken => "(",
             TokenKind.CloseParenthesisToken => ")",
+            TokenKind.LetKeyword => "let",
             _ => null
         };
     }
@@ -33,6 +34,17 @@ public static class Extensions
         {
             TokenKind.PlusToken or TokenKind.MinusToken => 7,
             _ => 0
+        };
+    }
+
+    public static TokenKind GetKeywordOrIdentifierKind(this string text)
+    {
+        return text switch
+        {
+            "let" => TokenKind.LetKeyword,
+            "integer" => TokenKind.IntegerKeyword,
+            "double" => TokenKind.DoubleKeyword,
+            _ => TokenKind.IdentifierToken
         };
     }
 }

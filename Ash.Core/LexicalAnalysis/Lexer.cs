@@ -1,10 +1,10 @@
 using System.Runtime.CompilerServices;
-using Hada.Core.Errors;
-using Hada.Core.Text;
+using Ash.Core.Errors;
+using Ash.Core.Text;
 
-[assembly: InternalsVisibleTo("Hada.Tests")]
+[assembly: InternalsVisibleTo("Ash.Tests")]
 
-namespace Hada.Core.LexicalAnalysis;
+namespace Ash.Core.LexicalAnalysis;
 
 internal sealed class Lexer
 {
@@ -96,7 +96,17 @@ internal sealed class Lexer
                 _tokenKind = TokenKind.CloseParenthesisToken;
                 Advance();
                 break;
+            case '=':
+                _tokenKind = TokenKind.EqualsToken;
+                Advance();
+                break;
             default:
+                if (char.IsLetter(Current))
+                {
+                    MakeKeywordOrIdentifierToken();
+                    break;
+                }
+
                 var illegalChar = Current;
                 Advance();
                 ErrorsBag.ReportIllegalCharacterError(illegalChar, posStart, _position);
@@ -107,6 +117,15 @@ internal sealed class Lexer
         var tokenText = _tokenKind.GetText() ?? _source.Text.Substring(_start, tokenLength);
 
         return new Token(_tokenKind, tokenText, posStart, _position, _tokenValue);
+    }
+
+    private void MakeKeywordOrIdentifierToken()
+    {
+        while (char.IsLetterOrDigit(Current) || Current == '_')
+            Advance();
+
+        var text = _source.Text.Substring(_start, _position.Index - _start);
+        _tokenKind = text.GetKeywordOrIdentifierKind();
     }
 
     private void MakeWhiteSpaceToken()
