@@ -15,4 +15,24 @@ public static class Extensions
             _ => null
         };
     }
+
+    public static int GetBinaryOperatorPriority(this TokenKind kind)
+    {
+        return kind switch
+        {
+            TokenKind.ExponentiationToken => 6,
+            TokenKind.MultiplicationToken or TokenKind.DivisionToken => 5,
+            TokenKind.PlusToken or TokenKind.MinusToken => 4,
+            _ => 0
+        };
+    }
+
+    public static int GetUnaryOperatorPriority(this TokenKind kind)
+    {
+        return kind switch
+        {
+            TokenKind.PlusToken or TokenKind.MinusToken => 7,
+            _ => 0
+        };
+    }
 }

@@ -1,9 +1,12 @@
+using System.Runtime.CompilerServices;
 using Hada.Core.Errors;
 using Hada.Core.Text;
 
+[assembly: InternalsVisibleTo("Hada.Tests")]
+
 namespace Hada.Core.LexicalAnalysis;
 
-public sealed class Lexer
+internal sealed class Lexer
 {
     private readonly SourceText _source;
     private readonly Position _position;
@@ -14,28 +17,31 @@ public sealed class Lexer
     private TokenKind _tokenKind;
     private object? _tokenValue;
 
-    public ErrorsBag ErrorsBag { get; }
+    public ErrorsBag ErrorsBag { get; } = new();
 
     public Lexer(SourceText source)
     {
         _source = source;
         _position = new Position(1, 0, 0, source.FileName, source.Text);
-        ErrorsBag = new ErrorsBag(_source);
     }
 
-    public IEnumerable<Token> GenerateTokens()
+    public Token[] GenerateTokens()
     {
+        var tokens = new List<Token>();
         Token token;
         do
         {
             token = NextToken();
             if (token.Kind is not (TokenKind.WhiteSpaceToken or TokenKind.BadToken))
-                yield return token;
+                tokens.Add(token);
         } while (token.Kind is not TokenKind.EndOfFileToken);
+
+        return tokens.ToArray();
     }
 
     private Token NextToken()
     {
+        var posStart = _position.Clone();
         _start = _position.Index;
         _tokenKind = TokenKind.BadToken;
         _tokenValue = null;
@@ -74,6 +80,10 @@ public sealed class Lexer
                 _tokenKind = TokenKind.MultiplicationToken;
                 Advance();
                 break;
+            case '^':
+                _tokenKind = TokenKind.ExponentiationToken;
+                Advance();
+                break;
             case '/':
                 _tokenKind = TokenKind.DivisionToken;
                 Advance();
@@ -87,7 +97,6 @@ public sealed class Lexer
                 Advance();
                 break;
             default:
-                var posStart = _position.Clone();
                 var illegalChar = Current;
                 Advance();
                 ErrorsBag.ReportIllegalCharacterError(illegalChar, posStart, _position);
@@ -97,7 +106,7 @@ public sealed class Lexer
         var tokenLength = _position.Index - _start;
         var tokenText = _tokenKind.GetText() ?? _source.Text.Substring(_start, tokenLength);
 
-        return new Token(_tokenKind, tokenText, _tokenValue);
+        return new Token(_tokenKind, tokenText, posStart, _position, _tokenValue);
     }
 
     private void MakeWhiteSpaceToken()
