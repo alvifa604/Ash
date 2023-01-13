@@ -21,6 +21,10 @@ public enum TokenKind
     NotEqualsToken,
     LogicalOrToken,
     EndOfFileToken,
+    GreaterThanOrEqualToken,
+    GreaterThanToken,
+    LessThanToken,
+    LessThanOrEqualToken,
     BadToken,
 
     // Expressions
