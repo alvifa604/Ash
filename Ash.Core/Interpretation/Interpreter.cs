@@ -182,6 +182,10 @@ internal sealed class Interpreter
                 return Equals(left, right);
             case TokenKind.NotEqualsToken:
                 return !Equals(left, right);
+            case TokenKind.LogicalAndToken:
+                return (bool)left && (bool)right;
+            case TokenKind.LogicalOrToken:
+                return (bool)left || (bool)right;
             default:
                 _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
                     binary.OperatorToken.Start, binary.OperatorToken.End);
