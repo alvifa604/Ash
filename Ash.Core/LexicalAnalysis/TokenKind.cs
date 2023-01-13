@@ -13,20 +13,27 @@ public enum TokenKind
     OpenParenthesisToken,
     CloseParenthesisToken,
     WhiteSpaceToken,
-    KeywordToken,
     IdentifierToken,
+    AssignmentToken,
     EqualsToken,
+    LogicalNotToken,
+    LogicalAndToken,
+    NotEqualsToken,
+    LogicalOrToken,
     EndOfFileToken,
     BadToken,
 
     // Expressions
-    NumberExpression,
+    LiteralExpression,
     UnaryExpression,
     BinaryExpression,
     ParenthesizedExpression,
+    AssignmentExpression,
+    ReAssignmentExpression,
+    VariableExpression,
 
     // Keywords
     LetKeyword,
-    IntegerKeyword,
-    DoubleKeyword
+    TrueKeyword,
+    FalseKeyword
 }

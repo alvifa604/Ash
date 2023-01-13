@@ -19,13 +19,37 @@ internal sealed class Parser
 
     public SyntaxTree Parse()
     {
-        var root = ParseBinaryExpression();
+        var root = ParseExpression();
         var endOfFileToken = MatchToken(TokenKind.EndOfFileToken);
         return new SyntaxTree(root, ErrorsBag, endOfFileToken);
     }
 
     private Expression ParseExpression()
     {
+        return ParseAssignmentExpression();
+    }
+
+    private Expression ParseAssignmentExpression()
+    {
+        if (Current.Kind is TokenKind.IdentifierToken && Peek(1).Kind is TokenKind.AssignmentToken)
+        {
+            var identifier = MatchToken(TokenKind.IdentifierToken);
+            var equalsToken = MatchToken(TokenKind.AssignmentToken);
+            var expression = ParseExpression();
+            return new ReAssignmentExpression(identifier, equalsToken, expression, identifier.Start,
+                expression.End);
+        }
+
+        if (Current.Kind is TokenKind.LetKeyword)
+        {
+            var letToken = MatchToken(TokenKind.LetKeyword);
+            var identifier = MatchToken(TokenKind.IdentifierToken);
+            var equalsToken = MatchToken(TokenKind.AssignmentToken);
+            var expression = ParseExpression();
+            return new AssignmentExpression(letToken, identifier, equalsToken, expression, letToken.Start,
+                expression.End);
+        }
+
         return ParseBinaryExpression();
     }
 
@@ -43,7 +67,9 @@ internal sealed class Parser
         }
         else
         {
-            left = ParsePrimaryExpression();
+            left = Current.Kind is TokenKind.LetKeyword
+                ? ParseAssignmentExpression()
+                : ParsePrimaryExpression();
         }
 
         while (true)
@@ -64,11 +90,19 @@ internal sealed class Parser
     {
         return Current.Kind switch
         {
-            TokenKind.IntegerToken or TokenKind.DoubleToken => ParseNumberExpression(),
+            TokenKind.IntegerToken or TokenKind.DoubleToken => ParseLiteralExpression(),
+            TokenKind.TrueKeyword or TokenKind.FalseKeyword => ParseBoolean(),
             TokenKind.OpenParenthesisToken => ParseParenthesizedExpression(),
             TokenKind.PlusToken or TokenKind.MinusToken => ParseUnaryExpression(),
-            _ => ParseLiteralExpression()
+            _ => ParseVariableExpression()
         };
+    }
+
+    private Expression ParseBoolean()
+    {
+        var booleanToken = NextToken();
+        var value = booleanToken.Kind == TokenKind.TrueKeyword;
+        return new LiteralExpression(booleanToken, booleanToken.Start, booleanToken.End, value);
     }
 
     private Expression ParseUnaryExpression()
@@ -86,22 +120,23 @@ internal sealed class Parser
         return new ParenthesizedExpression(openToken, expression, closeToken, openToken.Start, openToken.End);
     }
 
+    private Expression ParseVariableExpression()
+    {
+        var variableToken = MatchToken(TokenKind.IdentifierToken);
+        return new VariableExpression(variableToken, variableToken.Start, variableToken.End);
+    }
+
     private Expression ParseLiteralExpression()
     {
-        var literalToken = MatchToken(TokenKind.IdentifierToken);
+        var literalToken = NextToken();
         return new LiteralExpression(literalToken, literalToken.Start, literalToken.End);
     }
 
-    private Expression ParseNumberExpression()
+    private Token Peek(int offset = 0)
     {
-        var numberToken = NextToken();
-        return new NumberExpression(numberToken, numberToken.Start, numberToken.End);
-    }
-
-    private Token Peek()
-    {
-        return _position < _tokens.Length
-            ? _tokens[_position]
+        var index = _position + offset;
+        return index < _tokens.Length
+            ? _tokens[index]
             : _tokens.Last();
     }
 
@@ -117,7 +152,7 @@ internal sealed class Parser
         if (Current.Kind == kind) return NextToken();
 
         ErrorsBag.ReportInvalidSyntax($"Expected token of kind {kind}, but found {Current.Kind}", Current.Start!,
-            Current.End!);
+            Current.End);
         return new Token(kind, Current.Text, Current.Start, Current.End, "");
     }
 }

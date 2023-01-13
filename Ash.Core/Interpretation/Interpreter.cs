@@ -30,20 +30,73 @@ internal sealed class Interpreter
             BinaryExpression binary => VisitBinary(binary),
             UnaryExpression unary => VisitUnary(unary),
             ParenthesizedExpression parenthesized => VisitParenthesized(parenthesized),
-            //LiteralExpression literal => VisitLiteral(literal),
-            NumberExpression number => VisitNumber(number),
-            _ => VisitLiteral(node)
+            AssignmentExpression assignment => VisitAssignment(assignment),
+            ReAssignmentExpression reAssignment => VisitReAssignment(reAssignment),
+            LiteralExpression number => VisitLiteral(number),
+            _ => VisitVariable((VariableExpression)node)
         };
     }
 
-    private object VisitLiteral(Expression node)
+    private object? VisitReAssignment(ReAssignmentExpression reAssignment)
     {
-        throw new NotImplementedException();
+        var variableName = reAssignment.IdentifierToken.Text;
+        var variableExists = _context.Symbols[variableName] != null;
+        if (!variableExists)
+        {
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, reAssignment.Start,
+                reAssignment.End);
+            return null;
+        }
+
+        var value = Visit(reAssignment.Expression);
+
+        var newType = value?.GetType();
+        var prevType = _context.Symbols[variableName]?.GetType();
+
+        // Prevents reassignment of different types
+        if (newType != prevType)
+        {
+            _errorsBag.ReportRunTimeError($"Type {newType?.Name} cannot be assigned to type {prevType?.Name}",
+                _context, reAssignment.Start,
+                reAssignment.End);
+            return null;
+        }
+
+        _context.Symbols[variableName] = value;
+        return value;
     }
 
-    private object? VisitNumber(NumberExpression number)
+    private object? VisitAssignment(AssignmentExpression assignment)
     {
-        return number.Token.Value;
+        var variableName = assignment.IdentifierToken.Text;
+        var variableExists = _context.Symbols[variableName] != null;
+        if (variableExists)
+        {
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is already defined.", _context,
+                assignment.Start, assignment.End);
+            return null;
+        }
+
+        var value = Visit(assignment.Expression);
+        _context.Symbols[variableName] = value;
+        return value;
+    }
+
+    private object? VisitVariable(VariableExpression variable)
+    {
+        var variableName = variable.IdentifierToken.Text;
+        var variableExists = _context.Symbols[variableName] != null;
+        if (variableExists)
+            return _context.Symbols[variableName];
+
+        _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, variable.Start,
+            variable.End);
+        return null;
+    }
+
+    private object? VisitLiteral(LiteralExpression literal)
+    {
+        return literal.Value;
     }
 
     private object? VisitParenthesized(ParenthesizedExpression parenthesized)
@@ -53,7 +106,7 @@ internal sealed class Interpreter
 
     private object? VisitUnary(UnaryExpression unary)
     {
-        var @operator = unary.OperatorToken;
+        var op = unary.OperatorToken;
         var expression = Visit(unary.Expression);
 
         if (expression is null) return null;
@@ -62,17 +115,42 @@ internal sealed class Interpreter
         {
             case int:
             case double:
-                dynamic number = expression;
-                return @operator.Kind switch
-                {
-                    TokenKind.PlusToken => number,
-                    TokenKind.MinusToken => -number,
-                    _ => throw new NotImplementedException()
-                };
+                return HandleUnaryNumberOperators(op, expression, unary.Start, unary.End);
+            case bool b:
+                return HandleBooleanUnaryOperator(op, b, unary.Start, unary.End);
+            default:
+                _errorsBag.ReportInvalidUnaryOperator(op.Text, expression.GetType(), op.Start,
+                    op.End);
+                return null;
         }
+    }
 
-        _errorsBag.ReportInvalidUnaryOperator(@operator.Text, expression.GetType(), @operator.Start, @operator.End);
-        return expression;
+    private object? HandleBooleanUnaryOperator(Token op, bool value, Position start, Position end)
+    {
+        switch (op.Kind)
+        {
+            case TokenKind.LogicalNotToken:
+                return !value;
+            default:
+                _errorsBag.ReportInvalidUnaryOperator(op.Text, value.GetType(),
+                    start, end);
+                return null;
+        }
+    }
+
+    private object? HandleUnaryNumberOperators(Token op, dynamic number, Position start, Position end)
+    {
+        switch (op.Kind)
+        {
+            case TokenKind.PlusToken:
+                return number;
+            case TokenKind.MinusToken:
+                return -number;
+            default:
+                _errorsBag.ReportInvalidUnaryOperator(op.Text, number.GetType(),
+                    start, end);
+                return null;
+        }
     }
 
     private object? VisitBinary(BinaryExpression binary)
@@ -83,51 +161,68 @@ internal sealed class Interpreter
         if (left is null || right is null)
             return null;
 
-        if (left is (double or int) && right is (double or int))
+        switch (left)
         {
-            dynamic l = left;
-            dynamic r = right;
-            var result = l;
-            switch (binary.OperatorToken.Kind)
-            {
-                case TokenKind.PlusToken:
-                    result = l + r;
-                    break;
-                case TokenKind.MinusToken:
-                    result = l - r;
-                    break;
-                case TokenKind.MultiplicationToken:
-                    result = l * r;
-                    break;
-                case TokenKind.ExponentiationToken:
-                    if (l == 0)
-                    {
-                        _errorsBag.ReportRunTimeError("The base cannot be zero", _context, binary.Right.Start,
-                            binary.Right.End);
-                        return null;
-                    }
-
-                    result = Math.Pow(l, r);
-                    break;
-                case TokenKind.DivisionToken:
-                    if (r == 0)
-                    {
-                        _errorsBag.ReportRunTimeError("Division by zero is not allowed", _context, binary.Right.Start,
-                            binary.Right.End);
-                        return null;
-                    }
-
-                    result = (double)l / r;
-                    break;
-            }
-
-            if (result is double res)
-                return Math.Round(res, 10);
-            return result;
+            case (double or int) when right is (double or int):
+                return HandleNumbersOperators(left, right, binary);
+            case bool when right is bool:
+                return HandleBooleanBinaryOperators(left, right, binary);
+            default:
+                _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
+                    binary.OperatorToken.Start, binary.OperatorToken.End);
+                return null;
         }
+    }
 
-        _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
-            binary.OperatorToken.Start, binary.OperatorToken.End);
-        return left;
+    private object? HandleBooleanBinaryOperators(object left, object right, BinaryExpression binary)
+    {
+        switch (binary.OperatorToken.Kind)
+        {
+            case TokenKind.EqualsToken:
+                return Equals(left, right);
+            case TokenKind.NotEqualsToken:
+                return !Equals(left, right);
+            case TokenKind.LogicalAndToken:
+                return (bool)left && (bool)right;
+            case TokenKind.LogicalOrToken:
+                return (bool)left || (bool)right;
+            default:
+                _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
+                    binary.OperatorToken.Start, binary.OperatorToken.End);
+                return null;
+        }
+    }
+
+    private object? HandleNumbersOperators(dynamic left, dynamic right, BinaryExpression binary)
+    {
+        switch (binary.OperatorToken.Kind)
+        {
+            case TokenKind.PlusToken:
+                return left + right;
+            case TokenKind.MinusToken:
+                return left - right;
+            case TokenKind.MultiplicationToken:
+                return left + right is double d0 ? Math.Round(d0, 8) : left * right;
+            case TokenKind.ExponentiationToken:
+                if (left != 0)
+                    return Math.Pow(left, right) is double d1 ? Math.Round(d1, 8) : Math.Pow(left, right);
+                _errorsBag.ReportRunTimeError("The base cannot be zero", _context, binary.Right.Start,
+                    binary.Right.End);
+                return null;
+            case TokenKind.DivisionToken:
+                if (right != 0)
+                    return left / right is double d2 ? Math.Round(d2, 8) : left / right;
+                _errorsBag.ReportRunTimeError("Division by zero is not allowed", _context, binary.Right.Start,
+                    binary.Right.End);
+                return null;
+            case TokenKind.EqualsToken:
+                return left == right;
+            case TokenKind.NotEqualsToken:
+                return left != right;
+            default:
+                _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
+                    binary.OperatorToken.Start, binary.OperatorToken.End);
+                return null;
+        }
     }
 }

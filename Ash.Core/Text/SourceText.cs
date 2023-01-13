@@ -1,6 +1,6 @@
 namespace Ash.Core.Text;
 
-public class SourceText
+public sealed class SourceText
 {
     public string Text { get; }
     public string FileName { get; }

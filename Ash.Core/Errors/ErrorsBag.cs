@@ -39,7 +39,7 @@ public sealed class ErrorsBag : IEnumerable<Error>
 
     public void ReportInvalidUnaryOperator(string op, Type t1, Position start, Position end)
     {
-        var message = $"'{op}' is not a valid unary operator for type '{t1}'.";
+        var message = $"'{op}' is not a valid unary operator for type '{t1.Name}'";
         var error = new InvalidUnaryOperatorError(message, start, end);
         _errors.Add(error);
     }
@@ -56,14 +56,6 @@ public sealed class ErrorsBag : IEnumerable<Error>
         var error = new RunTimeError(message, start, end, context);
         _errors.Add(error);
     }
-
-    public void ReportDivisionByZero(Position start, Position end)
-    {
-        var message = "Division by zero is not allowed";
-        var error = new DivisionByZeroError(message, start, end);
-        _errors.Add(error);
-    }
-
 
     public void WriteErrorsInFile(SourceText source)
     {

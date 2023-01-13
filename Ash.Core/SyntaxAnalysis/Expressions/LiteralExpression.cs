@@ -4,15 +4,26 @@ namespace Ash.Core.SyntaxAnalysis.Expressions;
 
 public class LiteralExpression : Expression
 {
-    public override TokenKind Kind { get; }
-    public Token LiteralToken { get; }
+    public Token Token { get; }
+    public override TokenKind Kind => TokenKind.LiteralExpression;
     public override Position Start { get; }
     public override Position End { get; }
+    public object? Value { get; }
 
-    public LiteralExpression(Token literalToken, Position start, Position end)
+    public LiteralExpression(Token token, Position start, Position end) : this(token, start, end, token.Value)
     {
-        LiteralToken = literalToken;
+    }
+
+    public LiteralExpression(Token token, Position start, Position end, object? value)
+    {
+        Token = token;
         Start = start;
         End = end;
+        Value = value;
+    }
+
+    public override string ToString()
+    {
+        return Token.ToString();
     }
 }

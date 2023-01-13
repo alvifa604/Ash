@@ -39,7 +39,7 @@ public sealed class SyntaxTree
                 Console.WriteLine($"{indent}{u.OperatorToken.Kind}: {u.OperatorToken.Text}");
                 Print(u.Expression, indent);
                 break;
-            case NumberExpression n:
+            case LiteralExpression n:
                 Console.WriteLine($"{indent}{n.Token.Kind}: {n.Token.Text}");
                 break;
             case ParenthesizedExpression p:

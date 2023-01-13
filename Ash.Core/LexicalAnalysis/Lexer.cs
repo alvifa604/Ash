@@ -96,9 +96,60 @@ internal sealed class Lexer
                 _tokenKind = TokenKind.CloseParenthesisToken;
                 Advance();
                 break;
-            case '=':
-                _tokenKind = TokenKind.EqualsToken;
+            case '|':
+                var prevOr = Current;
                 Advance();
+                if (Current is '|')
+                {
+                    _tokenKind = TokenKind.LogicalOrToken;
+                    Advance();
+                }
+                else
+                {
+                    ErrorsBag.ReportIllegalCharacterError(prevOr, posStart, _position);
+                }
+
+                break;
+
+            case '&':
+                var prevAnd = Current;
+                Advance();
+                if (Current is '&')
+                {
+                    _tokenKind = TokenKind.LogicalAndToken;
+                    Advance();
+                }
+                else
+                {
+                    ErrorsBag.ReportIllegalCharacterError(prevAnd, posStart, _position);
+                }
+
+                break;
+            case '!':
+                Advance();
+                if (Current == '=')
+                {
+                    _tokenKind = TokenKind.NotEqualsToken;
+                    Advance();
+                }
+                else
+                {
+                    _tokenKind = TokenKind.LogicalNotToken;
+                }
+
+                break;
+            case '=':
+                Advance();
+                if (Current == '=')
+                {
+                    _tokenKind = TokenKind.EqualsToken;
+                    Advance();
+                }
+                else
+                {
+                    _tokenKind = TokenKind.AssignmentToken;
+                }
+
                 break;
             default:
                 if (char.IsLetter(Current))
