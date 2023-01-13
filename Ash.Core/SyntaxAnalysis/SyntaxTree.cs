@@ -6,16 +6,16 @@ namespace Ash.Core.SyntaxAnalysis;
 
 public sealed class SyntaxTree
 {
+    public Expression? Root { get; }
+    public ErrorsBag ErrorsBag { get; }
+    public Token EndOfFileToken { get; }
+
     public SyntaxTree(Expression? root, ErrorsBag errorsBag, Token endOfFileToken)
     {
         Root = root;
         ErrorsBag = errorsBag;
         EndOfFileToken = endOfFileToken;
     }
-
-    public Expression? Root { get; }
-    public ErrorsBag ErrorsBag { get; }
-    public Token EndOfFileToken { get; }
 
     public void Print()
     {
