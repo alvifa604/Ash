@@ -24,7 +24,7 @@ public static class Extensions
             TokenKind.ExponentiationToken => 5,
             TokenKind.MultiplicationToken or TokenKind.DivisionToken => 4,
             TokenKind.PlusToken or TokenKind.MinusToken => 3,
-            TokenKind.EqualsToken => 2,
+            TokenKind.EqualsToken or TokenKind.NotEqualsToken => 2,
             _ => 0
         };
     }

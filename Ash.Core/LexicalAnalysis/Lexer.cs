@@ -97,8 +97,17 @@ internal sealed class Lexer
                 Advance();
                 break;
             case '!':
-                _tokenKind = TokenKind.LogicalNotToken;
                 Advance();
+                if (Current == '=')
+                {
+                    _tokenKind = TokenKind.NotEqualsToken;
+                    Advance();
+                }
+                else
+                {
+                    _tokenKind = TokenKind.LogicalNotToken;
+                }
+
                 break;
             case '=':
                 Advance();

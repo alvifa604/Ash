@@ -180,6 +180,8 @@ internal sealed class Interpreter
         {
             case TokenKind.EqualsToken:
                 return Equals(left, right);
+            case TokenKind.NotEqualsToken:
+                return !Equals(left, right);
             default:
                 _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
                     binary.OperatorToken.Start, binary.OperatorToken.End);
@@ -196,21 +198,23 @@ internal sealed class Interpreter
             case TokenKind.MinusToken:
                 return left - right;
             case TokenKind.MultiplicationToken:
-                return Math.Round(left * right, 8);
+                return left + right is double d0 ? Math.Round(d0, 8) : left * right;
             case TokenKind.ExponentiationToken:
                 if (left != 0)
-                    return Math.Round(Math.Pow(left, right), 8);
+                    return Math.Pow(left, right) is double d1 ? Math.Round(d1, 8) : Math.Pow(left, right);
                 _errorsBag.ReportRunTimeError("The base cannot be zero", _context, binary.Right.Start,
                     binary.Right.End);
                 return null;
             case TokenKind.DivisionToken:
                 if (right != 0)
-                    return Math.Round((double)left / right, 8);
+                    return left / right is double d2 ? Math.Round(d2, 8) : left / right;
                 _errorsBag.ReportRunTimeError("Division by zero is not allowed", _context, binary.Right.Start,
                     binary.Right.End);
                 return null;
             case TokenKind.EqualsToken:
                 return left == right;
+            case TokenKind.NotEqualsToken:
+                return left != right;
             default:
                 _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
                     binary.OperatorToken.Start, binary.OperatorToken.End);
