@@ -219,6 +219,14 @@ internal sealed class Interpreter
                 return left == right;
             case TokenKind.NotEqualsToken:
                 return left != right;
+            case TokenKind.GreaterThanToken:
+                return left > right;
+            case TokenKind.GreaterThanOrEqualToken:
+                return left >= right;
+            case TokenKind.LessThanToken:
+                return left < right;
+            case TokenKind.LessThanOrEqualToken:
+                return left <= right;
             default:
                 _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
                     binary.OperatorToken.Start, binary.OperatorToken.End);
