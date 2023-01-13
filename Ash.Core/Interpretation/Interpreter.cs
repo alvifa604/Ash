@@ -28,96 +28,120 @@ internal sealed class Interpreter
     {
         return node switch
         {
-            DeclarationStatement assignment => VisitDeclaration(assignment),
-            ExpressionStatement expression => VisitExpression(expression.Expression),
-            _ => VisitExpression(node)
+            DeclarationStatement assignment => VisitDeclaration(assignment, _context),
+            IfStatement ifStatement => VisitIfStatement(ifStatement, _context),
+            ElseStatement elseStatement => VisitElseStatement(elseStatement, _context),
+            ExpressionStatement expression => VisitExpression(expression.Expression, _context),
+            _ => VisitExpression(node, _context)
         };
     }
 
-    private object? VisitExpression(Node node)
+    private object? VisitDeclaration(DeclarationStatement declaration, Context context)
+    {
+        var variableName = declaration.IdentifierToken.Text;
+        var variableExists = context.Symbols[variableName] != null;
+        if (variableExists)
+        {
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is already defined.", context,
+                declaration.Start, declaration.End);
+            return null;
+        }
+
+        var value = VisitExpression(declaration.Expression, context);
+        context.Symbols[variableName] = value;
+        return value;
+    }
+
+    private object? VisitIfStatement(IfStatement ifStatement, Context context)
+    {
+        var condition = VisitExpression(ifStatement.Condition, context);
+        if (condition is not bool booleanCondition)
+        {
+            _errorsBag.ReportRunTimeError("Condition must be a boolean.", context,
+                ifStatement.Condition.Start, ifStatement.Condition.End);
+            return null;
+        }
+
+        if (booleanCondition)
+            return VisitStatement(ifStatement.BodyStatement);
+        return ifStatement.ElseStatement != null
+            ? VisitStatement(ifStatement.ElseStatement)
+            : "";
+    }
+
+    private object? VisitElseStatement(ElseStatement elseStatement, Context context)
+    {
+        return VisitStatement(elseStatement.BodyStatement);
+    }
+
+    private object? VisitExpression(Node node, Context context)
     {
         return node switch
         {
-            BinaryExpression binary => VisitBinary(binary),
-            UnaryExpression unary => VisitUnary(unary),
-            ParenthesizedExpression parenthesized => VisitParenthesized(parenthesized),
-            AssignmentExpression assignment => VisitAssignment(assignment),
-            LiteralExpression number => VisitLiteral(number),
-            _ => VisitVariable((VariableExpression)node)
+            BinaryExpression binary => VisitBinary(binary, context),
+            UnaryExpression unary => VisitUnary(unary, context),
+            ParenthesizedExpression parenthesized => VisitParenthesized(parenthesized, context),
+            AssignmentExpression assignment => VisitAssignment(assignment, context),
+            LiteralExpression number => VisitLiteral(number, context),
+            _ => VisitVariable((VariableExpression)node, context)
         };
     }
 
-    private object? VisitAssignment(AssignmentExpression assignment)
+    private object? VisitAssignment(AssignmentExpression assignment, Context context)
     {
         var variableName = assignment.IdentifierToken.Text;
-        var variableExists = _context.Symbols[variableName] != null;
+        var variableExists = context.Symbols[variableName] != null;
         if (!variableExists)
         {
-            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, assignment.Start,
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", context, assignment.Start,
                 assignment.End);
             return null;
         }
 
-        var value = VisitExpression(assignment.Expression);
+        var value = VisitExpression(assignment.Expression, context);
 
         var newType = value?.GetType();
-        var prevType = _context.Symbols[variableName]?.GetType();
+        var prevType = context.Symbols[variableName]?.GetType();
 
         // Prevents reassignment of different types
         if (newType != prevType)
         {
             _errorsBag.ReportRunTimeError($"Type {newType?.Name} cannot be assigned to type {prevType?.Name}",
-                _context, assignment.Start,
+                context, assignment.Start,
                 assignment.End);
             return null;
         }
 
-        _context.Symbols[variableName] = value;
+        context.Symbols[variableName] = value;
         return value;
     }
 
-    private object? VisitDeclaration(DeclarationStatement declaration)
-    {
-        var variableName = declaration.IdentifierToken.Text;
-        var variableExists = _context.Symbols[variableName] != null;
-        if (variableExists)
-        {
-            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is already defined.", _context,
-                declaration.Start, declaration.End);
-            return null;
-        }
-
-        var value = VisitExpression(declaration.Expression);
-        _context.Symbols[variableName] = value;
-        return value;
-    }
-
-    private object? VisitVariable(VariableExpression variable)
+    private object? VisitVariable(VariableExpression variable, Context context)
     {
         var variableName = variable.IdentifierToken.Text;
-        var variableExists = _context.Symbols[variableName] != null;
+        var variableExists = context.Symbols[variableName] != null;
         if (variableExists)
-            return _context.Symbols[variableName];
+            return context.Symbols[variableName];
 
-        _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, variable.Start,
+        _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", context, variable.Start,
             variable.End);
         return null;
     }
 
-    private object? VisitLiteral(LiteralExpression literal)
+    private object? VisitLiteral(LiteralExpression literal, Context context)
     {
         return literal.Value;
     }
 
-    private object? VisitParenthesized(ParenthesizedExpression parenthesized)
+    private object? VisitParenthesized(ParenthesizedExpression parenthesized, Context context)
     {
-        return VisitExpression(parenthesized.Expression);
+        return VisitExpression(parenthesized.Expression, context);
     }
 
-    private object? VisitUnary(UnaryExpression unary)
+    private object? VisitUnary(UnaryExpression unary, Context context)
     {
         var op = unary.OperatorToken;
-        var expression = VisitExpression(unary.Expression);
+        var expression = VisitExpression(unary.Expression, context);
 
         if (expression is null) return null;
 
@@ -163,10 +187,10 @@ internal sealed class Interpreter
         }
     }
 
-    private object? VisitBinary(BinaryExpression binary)
+    private object? VisitBinary(BinaryExpression binary, Context context)
     {
-        var left = VisitExpression(binary.Left);
-        var right = VisitExpression(binary.Right);
+        var left = VisitExpression(binary.Left, context);
+        var right = VisitExpression(binary.Right, context);
 
         if (left is null || right is null)
             return null;
@@ -174,7 +198,7 @@ internal sealed class Interpreter
         switch (left)
         {
             case (double or int) when right is (double or int):
-                return HandleNumbersOperators(left, right, binary);
+                return HandleNumbersOperators(left, right, binary, context);
             case bool when right is bool:
                 return HandleBooleanBinaryOperators(left, right, binary);
             default:
@@ -203,7 +227,7 @@ internal sealed class Interpreter
         }
     }
 
-    private object? HandleNumbersOperators(dynamic left, dynamic right, BinaryExpression binary)
+    private object? HandleNumbersOperators(dynamic left, dynamic right, BinaryExpression binary, Context context)
     {
         switch (binary.OperatorToken.Kind)
         {
@@ -216,13 +240,13 @@ internal sealed class Interpreter
             case TokenKind.ExponentiationToken:
                 if (left != 0)
                     return Math.Pow(left, right) is double d1 ? Math.Round(d1, 8) : Math.Pow(left, right);
-                _errorsBag.ReportRunTimeError("The base cannot be zero", _context, binary.Right.Start,
+                _errorsBag.ReportRunTimeError("The base cannot be zero", context, binary.Right.Start,
                     binary.Right.End);
                 return null;
             case TokenKind.DivisionToken:
                 if (right != 0)
                     return left / right is double d2 ? Math.Round(d2, 8) : left / right;
-                _errorsBag.ReportRunTimeError("Division by zero is not allowed", _context, binary.Right.Start,
+                _errorsBag.ReportRunTimeError("Division by zero is not allowed", context, binary.Right.Start,
                     binary.Right.End);
                 return null;
             case TokenKind.EqualsToken:

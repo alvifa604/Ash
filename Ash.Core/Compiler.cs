@@ -17,7 +17,7 @@ public sealed class Compiler
         {
             ["null"] = 0
         };
-        _context = new Context("main", globalSymbolTable);
+        _context = new Context("main", null, globalSymbolTable);
     }
 
     public InterpreterResult? Run(string text)

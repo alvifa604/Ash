@@ -25,6 +25,8 @@ public enum TokenKind
     GreaterThanToken,
     LessThanToken,
     LessThanOrEqualToken,
+    OpenBraceToken,
+    CloseBraceToken,
     BadToken,
 
     // Expressions
@@ -33,15 +35,18 @@ public enum TokenKind
     BinaryExpression,
     ParenthesizedExpression,
     VariableExpression,
+    AssignmentExpression,
 
     // Statements
     DeclarationStatement,
-    AssignmentExpression,
     ExpressionStatement,
     IfStatement,
+    ElseStatement,
 
     // Keywords
     LetKeyword,
     TrueKeyword,
-    FalseKeyword
+    FalseKeyword,
+    IfKeyword,
+    ElseKeyword
 }

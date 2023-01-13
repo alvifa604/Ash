@@ -96,6 +96,14 @@ internal sealed class Lexer
                 _tokenKind = TokenKind.CloseParenthesisToken;
                 Advance();
                 break;
+            case '{':
+                _tokenKind = TokenKind.OpenBraceToken;
+                Advance();
+                break;
+            case '}':
+                _tokenKind = TokenKind.CloseBraceToken;
+                Advance();
+                break;
             case '>':
                 Advance();
                 if (Current == '=')

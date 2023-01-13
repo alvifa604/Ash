@@ -25,17 +25,17 @@ internal sealed class Parser
         return new SyntaxTree(root, ErrorsBag, endOfFileToken);
     }
 
-    private Statement? ParseStatement()
+    private Statement ParseStatement()
     {
         return Current.Kind switch
         {
             TokenKind.LetKeyword => ParseDeclarationStatement(),
-            TokenKind.IfStatement => ParseIfStatement(),
+            TokenKind.IfKeyword => ParseIfStatement(),
             _ => ParseExpressionStatement()
         };
     }
 
-    private Statement ParseDeclarationStatement()
+    private DeclarationStatement ParseDeclarationStatement()
     {
         var letToken = MatchToken(TokenKind.LetKeyword);
         var identifier = MatchToken(TokenKind.IdentifierToken);
@@ -45,9 +45,28 @@ internal sealed class Parser
             expression.End);
     }
 
-    private Statement ParseIfStatement()
+    private IfStatement ParseIfStatement()
     {
-        throw new NotImplementedException();
+        var ifToken = MatchToken(TokenKind.IfKeyword);
+        var condition = ParseExpression();
+        MatchToken(TokenKind.OpenBraceToken);
+        var body = ParseStatement();
+        var closeBraceToken = MatchToken(TokenKind.CloseBraceToken);
+
+        if (Current.Kind is not TokenKind.ElseKeyword)
+            return new IfStatement(ifToken, condition, body, closeBraceToken.End);
+
+        var elseStatement = ParseElseStatement();
+        return new IfStatement(ifToken, condition, body, ifToken.Start, elseStatement);
+    }
+
+    private ElseStatement ParseElseStatement()
+    {
+        var elseToken = MatchToken(TokenKind.ElseKeyword);
+        MatchToken(TokenKind.OpenBraceToken);
+        var body = ParseStatement();
+        var closeBraceToken = MatchToken(TokenKind.CloseBraceToken);
+        return new ElseStatement(elseToken, body, closeBraceToken.End);
     }
 
     private Statement ParseExpressionStatement()
@@ -172,7 +191,8 @@ internal sealed class Parser
     {
         if (Current.Kind == kind) return NextToken();
 
-        ErrorsBag.ReportInvalidSyntax($"Expected token of kind {kind}, but found {Current.Kind}", Current.Start!,
+        ErrorsBag.ReportInvalidSyntax($"Expected '{kind.GetText()}', but found '{Current.Kind.GetText()}'",
+            Current.Start!,
             Current.End);
         return new Token(kind, Current.Text, Current.Start, Current.End, "");
     }

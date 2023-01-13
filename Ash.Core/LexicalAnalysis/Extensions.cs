@@ -14,6 +14,8 @@ public static class Extensions
             TokenKind.CloseParenthesisToken => ")",
             TokenKind.LetKeyword => "let",
             TokenKind.IfStatement => "if",
+            TokenKind.ElseStatement => "else",
+            TokenKind.EndOfFileToken => "end of file",
             _ => null
         };
     }
@@ -49,7 +51,8 @@ public static class Extensions
             "let" => TokenKind.LetKeyword,
             "true" => TokenKind.TrueKeyword,
             "false" => TokenKind.FalseKeyword,
-            "if" => TokenKind.IfStatement,
+            "if" => TokenKind.IfKeyword,
+            "else" => TokenKind.ElseKeyword,
             _ => TokenKind.IdentifierToken
         };
     }
