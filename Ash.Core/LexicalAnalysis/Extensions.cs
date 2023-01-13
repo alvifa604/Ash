@@ -13,6 +13,7 @@ public static class Extensions
             TokenKind.OpenParenthesisToken => "(",
             TokenKind.CloseParenthesisToken => ")",
             TokenKind.LetKeyword => "let",
+            TokenKind.IfStatement => "if",
             _ => null
         };
     }
@@ -48,6 +49,7 @@ public static class Extensions
             "let" => TokenKind.LetKeyword,
             "true" => TokenKind.TrueKeyword,
             "false" => TokenKind.FalseKeyword,
+            "if" => TokenKind.IfStatement,
             _ => TokenKind.IdentifierToken
         };
     }

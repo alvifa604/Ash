@@ -32,9 +32,13 @@ public enum TokenKind
     UnaryExpression,
     BinaryExpression,
     ParenthesizedExpression,
-    AssignmentExpression,
-    ReAssignmentExpression,
     VariableExpression,
+
+    // Statements
+    DeclarationStatement,
+    AssignmentStatement,
+    ExpressionStatement,
+    IfStatement,
 
     // Keywords
     LetKeyword,
