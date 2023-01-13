@@ -96,6 +96,10 @@ internal sealed class Lexer
                 _tokenKind = TokenKind.CloseParenthesisToken;
                 Advance();
                 break;
+            case '!':
+                _tokenKind = TokenKind.LogicalNotToken;
+                Advance();
+                break;
             case '=':
                 Advance();
                 if (Current == '=')

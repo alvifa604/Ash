@@ -16,6 +16,7 @@ public enum TokenKind
     IdentifierToken,
     AssignmentToken,
     EqualsToken,
+    LogicalNotToken,
     EndOfFileToken,
     BadToken,
 

@@ -106,7 +106,7 @@ internal sealed class Interpreter
 
     private object? VisitUnary(UnaryExpression unary)
     {
-        var @operator = unary.OperatorToken;
+        var op = unary.OperatorToken;
         var expression = Visit(unary.Expression);
 
         if (expression is null) return null;
@@ -115,17 +115,42 @@ internal sealed class Interpreter
         {
             case int:
             case double:
-                dynamic number = expression;
-                return @operator.Kind switch
-                {
-                    TokenKind.PlusToken => number,
-                    TokenKind.MinusToken => -number,
-                    _ => throw new NotImplementedException()
-                };
+                return HandleUnaryNumberOperators(op, expression, unary.Start, unary.End);
+            case bool b:
+                return HandleBooleanUnaryOperator(op, b, unary.Start, unary.End);
+            default:
+                _errorsBag.ReportInvalidUnaryOperator(op.Text, expression.GetType(), op.Start,
+                    op.End);
+                return null;
         }
+    }
 
-        _errorsBag.ReportInvalidUnaryOperator(@operator.Text, expression.GetType(), @operator.Start, @operator.End);
-        return null;
+    private object? HandleBooleanUnaryOperator(Token op, bool value, Position start, Position end)
+    {
+        switch (op.Kind)
+        {
+            case TokenKind.LogicalNotToken:
+                return !value;
+            default:
+                _errorsBag.ReportInvalidUnaryOperator(op.Text, value.GetType(),
+                    start, end);
+                return null;
+        }
+    }
+
+    private object? HandleUnaryNumberOperators(Token op, dynamic number, Position start, Position end)
+    {
+        switch (op.Kind)
+        {
+            case TokenKind.PlusToken:
+                return number;
+            case TokenKind.MinusToken:
+                return -number;
+            default:
+                _errorsBag.ReportInvalidUnaryOperator(op.Text, number.GetType(),
+                    start, end);
+                return null;
+        }
     }
 
     private object? VisitBinary(BinaryExpression binary)
@@ -141,7 +166,7 @@ internal sealed class Interpreter
             case (double or int) when right is (double or int):
                 return HandleNumbersOperators(left, right, binary);
             case bool when right is bool:
-                return HandleBooleanOperators(left, right, binary);
+                return HandleBooleanBinaryOperators(left, right, binary);
             default:
                 _errorsBag.ReportInvalidBinaryOperator(binary.OperatorToken.Text, left.GetType(), right.GetType(),
                     binary.OperatorToken.Start, binary.OperatorToken.End);
@@ -149,7 +174,7 @@ internal sealed class Interpreter
         }
     }
 
-    private object? HandleBooleanOperators(object left, object right, BinaryExpression binary)
+    private object? HandleBooleanBinaryOperators(object left, object right, BinaryExpression binary)
     {
         switch (binary.OperatorToken.Kind)
         {

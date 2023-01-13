@@ -33,6 +33,7 @@ public static class Extensions
     {
         return kind switch
         {
+            TokenKind.LogicalNotToken => 6,
             TokenKind.PlusToken or TokenKind.MinusToken => 6,
             _ => 0
         };
