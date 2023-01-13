@@ -6,11 +6,11 @@ namespace Ash.Core.SyntaxAnalysis;
 
 public sealed class SyntaxTree
 {
-    public Expression? Root { get; }
+    public Node? Root { get; }
     public ErrorsBag ErrorsBag { get; }
     public Token EndOfFileToken { get; }
 
-    public SyntaxTree(Expression? root, ErrorsBag errorsBag, Token endOfFileToken)
+    public SyntaxTree(Node? root, ErrorsBag errorsBag, Token endOfFileToken)
     {
         Root = root;
         ErrorsBag = errorsBag;
@@ -22,7 +22,7 @@ public sealed class SyntaxTree
         Print(Root);
     }
 
-    private static void Print(Expression node, string indent = "")
+    private static void Print(Node node, string indent = "")
     {
         switch (node)
         {

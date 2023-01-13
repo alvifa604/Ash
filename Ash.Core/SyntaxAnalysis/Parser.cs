@@ -1,6 +1,7 @@
 using Ash.Core.Errors;
 using Ash.Core.LexicalAnalysis;
 using Ash.Core.SyntaxAnalysis.Expressions;
+using Ash.Core.SyntaxAnalysis.Statements;
 
 namespace Ash.Core.SyntaxAnalysis;
 
@@ -19,9 +20,40 @@ internal sealed class Parser
 
     public SyntaxTree Parse()
     {
-        var root = ParseExpression();
+        var root = ParseStatement();
         var endOfFileToken = MatchToken(TokenKind.EndOfFileToken);
         return new SyntaxTree(root, ErrorsBag, endOfFileToken);
+    }
+
+    private Statement? ParseStatement()
+    {
+        return Current.Kind switch
+        {
+            TokenKind.LetKeyword => ParseDeclarationStatement(),
+            TokenKind.IfStatement => ParseIfStatement(),
+            _ => ParseExpressionStatement()
+        };
+    }
+
+    private Statement ParseDeclarationStatement()
+    {
+        var letToken = MatchToken(TokenKind.LetKeyword);
+        var identifier = MatchToken(TokenKind.IdentifierToken);
+        var equalsToken = MatchToken(TokenKind.AssignmentToken);
+        var expression = ParseExpression();
+        return new DeclarationStatement(letToken, identifier, equalsToken, expression, letToken.Start,
+            expression.End);
+    }
+
+    private Statement ParseIfStatement()
+    {
+        throw new NotImplementedException();
+    }
+
+    private Statement ParseExpressionStatement()
+    {
+        var expression = ParseExpression();
+        return new ExpressionStatement(expression);
     }
 
     private Expression ParseExpression()
@@ -36,18 +68,7 @@ internal sealed class Parser
             var identifier = MatchToken(TokenKind.IdentifierToken);
             var equalsToken = MatchToken(TokenKind.AssignmentToken);
             var expression = ParseExpression();
-            return new ReAssignmentExpression(identifier, equalsToken, expression, identifier.Start,
-                expression.End);
-        }
-
-        if (Current.Kind is TokenKind.LetKeyword)
-        {
-            var letToken = MatchToken(TokenKind.LetKeyword);
-            var identifier = MatchToken(TokenKind.IdentifierToken);
-            var equalsToken = MatchToken(TokenKind.AssignmentToken);
-            var expression = ParseExpression();
-            return new AssignmentExpression(letToken, identifier, equalsToken, expression, letToken.Start,
-                expression.End);
+            return new AssignmentExpression(identifier, equalsToken, expression);
         }
 
         return ParseBinaryExpression();
@@ -154,5 +175,20 @@ internal sealed class Parser
         ErrorsBag.ReportInvalidSyntax($"Expected token of kind {kind}, but found {Current.Kind}", Current.Start!,
             Current.End);
         return new Token(kind, Current.Text, Current.Start, Current.End, "");
+    }
+}
+
+internal class ExpressionStatement : Statement
+{
+    public override TokenKind Kind => TokenKind.ExpressionStatement;
+    public Expression Expression { get; }
+    public override Position Start { get; }
+    public override Position End { get; }
+
+    public ExpressionStatement(Expression expression)
+    {
+        Expression = expression;
+        Start = expression.Start;
+        End = expression.End;
     }
 }

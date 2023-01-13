@@ -36,7 +36,7 @@ public enum TokenKind
 
     // Statements
     DeclarationStatement,
-    AssignmentStatement,
+    AssignmentExpression,
     ExpressionStatement,
     IfStatement,
 

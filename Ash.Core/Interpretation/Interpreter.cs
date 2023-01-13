@@ -2,6 +2,7 @@ using Ash.Core.Errors;
 using Ash.Core.LexicalAnalysis;
 using Ash.Core.SyntaxAnalysis;
 using Ash.Core.SyntaxAnalysis.Expressions;
+using Ash.Core.SyntaxAnalysis.Statements;
 
 namespace Ash.Core.Interpretation;
 
@@ -19,11 +20,21 @@ internal sealed class Interpreter
 
     public InterpreterResult Interpret()
     {
-        var result = Visit(_tree.Root!);
+        var result = VisitStatement(_tree.Root!);
         return new InterpreterResult(result, _errorsBag);
     }
 
-    private object? Visit(Expression node)
+    private object? VisitStatement(Node node)
+    {
+        return node switch
+        {
+            DeclarationStatement assignment => VisitDeclaration(assignment),
+            ExpressionStatement expression => VisitExpression(expression.Expression),
+            _ => VisitExpression(node)
+        };
+    }
+
+    private object? VisitExpression(Node node)
     {
         return node switch
         {
@@ -31,24 +42,23 @@ internal sealed class Interpreter
             UnaryExpression unary => VisitUnary(unary),
             ParenthesizedExpression parenthesized => VisitParenthesized(parenthesized),
             AssignmentExpression assignment => VisitAssignment(assignment),
-            ReAssignmentExpression reAssignment => VisitReAssignment(reAssignment),
             LiteralExpression number => VisitLiteral(number),
             _ => VisitVariable((VariableExpression)node)
         };
     }
 
-    private object? VisitReAssignment(ReAssignmentExpression reAssignment)
+    private object? VisitAssignment(AssignmentExpression assignment)
     {
-        var variableName = reAssignment.IdentifierToken.Text;
+        var variableName = assignment.IdentifierToken.Text;
         var variableExists = _context.Symbols[variableName] != null;
         if (!variableExists)
         {
-            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, reAssignment.Start,
-                reAssignment.End);
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, assignment.Start,
+                assignment.End);
             return null;
         }
 
-        var value = Visit(reAssignment.Expression);
+        var value = VisitExpression(assignment.Expression);
 
         var newType = value?.GetType();
         var prevType = _context.Symbols[variableName]?.GetType();
@@ -57,8 +67,8 @@ internal sealed class Interpreter
         if (newType != prevType)
         {
             _errorsBag.ReportRunTimeError($"Type {newType?.Name} cannot be assigned to type {prevType?.Name}",
-                _context, reAssignment.Start,
-                reAssignment.End);
+                _context, assignment.Start,
+                assignment.End);
             return null;
         }
 
@@ -66,18 +76,18 @@ internal sealed class Interpreter
         return value;
     }
 
-    private object? VisitAssignment(AssignmentExpression assignment)
+    private object? VisitDeclaration(DeclarationStatement declaration)
     {
-        var variableName = assignment.IdentifierToken.Text;
+        var variableName = declaration.IdentifierToken.Text;
         var variableExists = _context.Symbols[variableName] != null;
         if (variableExists)
         {
             _errorsBag.ReportRunTimeError($"Variable '{variableName}' is already defined.", _context,
-                assignment.Start, assignment.End);
+                declaration.Start, declaration.End);
             return null;
         }
 
-        var value = Visit(assignment.Expression);
+        var value = VisitExpression(declaration.Expression);
         _context.Symbols[variableName] = value;
         return value;
     }
@@ -101,13 +111,13 @@ internal sealed class Interpreter
 
     private object? VisitParenthesized(ParenthesizedExpression parenthesized)
     {
-        return Visit(parenthesized.Expression);
+        return VisitExpression(parenthesized.Expression);
     }
 
     private object? VisitUnary(UnaryExpression unary)
     {
         var op = unary.OperatorToken;
-        var expression = Visit(unary.Expression);
+        var expression = VisitExpression(unary.Expression);
 
         if (expression is null) return null;
 
@@ -155,8 +165,8 @@ internal sealed class Interpreter
 
     private object? VisitBinary(BinaryExpression binary)
     {
-        var left = Visit(binary.Left);
-        var right = Visit(binary.Right);
+        var left = VisitExpression(binary.Left);
+        var right = VisitExpression(binary.Right);
 
         if (left is null || right is null)
             return null;
