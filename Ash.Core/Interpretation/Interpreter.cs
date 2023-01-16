@@ -20,19 +20,23 @@ internal sealed class Interpreter
 
     public InterpreterResult Interpret()
     {
-        var result = VisitStatement(_tree.Root!);
+        var result = VisitStatement(_tree.Root!, _context);
         return new InterpreterResult(result, _errorsBag);
     }
 
-    private object? VisitStatement(Node node)
+    private object? VisitStatement(Node node, Context context)
     {
         return node switch
         {
-            DeclarationStatement assignment => VisitDeclaration(assignment, _context),
-            IfStatement ifStatement => VisitIfStatement(ifStatement, _context),
-            ElseStatement elseStatement => VisitElseStatement(elseStatement, _context),
-            ExpressionStatement expression => VisitExpression(expression.Expression, _context),
-            _ => VisitExpression(node, _context)
+            DeclarationStatement assignment => VisitDeclaration(assignment, context),
+            IfStatement ifStatement => VisitIfStatement(ifStatement, context),
+            ElseStatement elseStatement => VisitElseStatement(elseStatement, context),
+            ForStatement forStatement => VisitForStatement(forStatement, context),
+            WhileStatement whileStatement => VisitWhileStatement(whileStatement, context),
+            BreakStatement breakStatement => breakStatement,
+            ExpressionStatement expression => VisitExpression(expression.Expression, context),
+            BlockStatement block => VisitStatement(block.Body, context),
+            _ => VisitExpression(node, context)
         };
     }
 
@@ -54,6 +58,7 @@ internal sealed class Interpreter
 
     private object? VisitIfStatement(IfStatement ifStatement, Context context)
     {
+        var localContext = new Context("If", context);
         var condition = VisitExpression(ifStatement.Condition, context);
         if (condition is not bool booleanCondition)
         {
@@ -63,15 +68,117 @@ internal sealed class Interpreter
         }
 
         if (booleanCondition)
-            return VisitStatement(ifStatement.BodyStatement);
+            return VisitStatement(ifStatement.Body, localContext);
         return ifStatement.ElseStatement != null
-            ? VisitStatement(ifStatement.ElseStatement)
+            ? VisitStatement(ifStatement.ElseStatement, localContext)
             : "";
     }
 
     private object? VisitElseStatement(ElseStatement elseStatement, Context context)
     {
-        return VisitStatement(elseStatement.BodyStatement);
+        return VisitStatement(elseStatement.Body, context);
+    }
+
+    private object? VisitForStatement(ForStatement forStatement, Context context)
+    {
+        var lowerBoundVariable = forStatement.LowerBoundDeclaration.IdentifierToken.Text;
+        var lowerBound = VisitDeclaration(forStatement.LowerBoundDeclaration, context);
+        if (lowerBound is not int lower)
+        {
+            _errorsBag.ReportRunTimeError("Lower bound must be an integer", context,
+                forStatement.LowerBoundDeclaration.Start, forStatement.LowerBoundDeclaration.End);
+            return null;
+        }
+
+        var upperBound = VisitExpression(forStatement.UpperBound, context);
+        if (upperBound is not int upper)
+        {
+            _errorsBag.ReportRunTimeError("Upper bound must be an integer", context,
+                forStatement.UpperBound.Start, forStatement.UpperBound.End);
+            return null;
+        }
+
+        if (forStatement.Step is null)
+        {
+            if (lower > upper)
+                for (var i = lower; i > upper; i--)
+                {
+                    context.Symbols[lowerBoundVariable] = i;
+                    var result = VisitStatement(forStatement.Body, context);
+                    if (result is null) return null;
+                    if (result is BreakStatement) break;
+                }
+            else
+                for (var i = lower; i < upper; i++)
+                {
+                    context.Symbols[lowerBoundVariable] = i;
+                    var result = VisitStatement(forStatement.Body, context);
+                    if (result is null) return null;
+                    if (result is BreakStatement) break;
+                }
+        }
+        else
+        {
+            var step = VisitExpression(forStatement.Step, context);
+            if (step is not int stepValue)
+            {
+                _errorsBag.ReportRunTimeError("Step must be an integer", context,
+                    forStatement.Step.Start, forStatement.Step.End);
+                return null;
+            }
+
+            if (stepValue < 1)
+            {
+                _errorsBag.ReportRunTimeError("Step cannot be less than 1", context,
+                    forStatement.Step.Start, forStatement.Step.End);
+                return null;
+            }
+
+            if (lower > upper)
+                for (var i = lower; i > upper; i -= stepValue)
+                {
+                    context.Symbols[lowerBoundVariable] = i;
+                    var result = VisitStatement(forStatement.Body, context);
+                    Console.WriteLine(result);
+                    if (result is null) return null;
+                    if (result is BreakStatement) break;
+                }
+            else
+                for (var i = lower; i < upper; i += stepValue)
+                {
+                    context.Symbols[lowerBoundVariable] = i;
+                    var result = VisitStatement(forStatement.Body, context);
+                    Console.WriteLine(result);
+                    if (result is null) return null;
+                    if (result is BreakStatement) break;
+                }
+        }
+
+        context.Symbols.Remove(lowerBoundVariable);
+        return "";
+    }
+
+
+    private object? VisitWhileStatement(WhileStatement whileStatement, Context context)
+    {
+        //var localContext = new Context("while", context);
+        var condition = VisitExpression(whileStatement.Condition, context);
+        if (condition is not bool)
+        {
+            _errorsBag.ReportRunTimeError("Condition must be a boolean.", context,
+                whileStatement.Condition.Start, whileStatement.Condition.End);
+            return null;
+        }
+
+        while ((bool)condition!)
+        {
+            var res = VisitStatement(whileStatement.Body, context);
+            if (res is null) return null;
+            if (res is BreakStatement) break;
+            condition = VisitExpression(whileStatement.Condition, context);
+        }
+
+        return "";
     }
 
     private object? VisitExpression(Node node, Context context)
@@ -119,9 +226,9 @@ internal sealed class Interpreter
     private object? VisitVariable(VariableExpression variable, Context context)
     {
         var variableName = variable.IdentifierToken.Text;
-        var variableExists = context.Symbols[variableName] != null;
-        if (variableExists)
-            return context.Symbols[variableName];
+        var existingVar = context.Symbols[variableName];
+        if (existingVar != null)
+            return existingVar;
 
         _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", context, variable.Start,
             variable.End);

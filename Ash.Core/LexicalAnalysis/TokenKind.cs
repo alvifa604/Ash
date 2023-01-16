@@ -20,13 +20,14 @@ public enum TokenKind
     LogicalAndToken,
     NotEqualsToken,
     LogicalOrToken,
-    EndOfFileToken,
     GreaterThanOrEqualToken,
     GreaterThanToken,
     LessThanToken,
     LessThanOrEqualToken,
     OpenBraceToken,
     CloseBraceToken,
+    SemicolonToken,
+    EndOfFileToken,
     BadToken,
 
     // Expressions
@@ -38,15 +39,25 @@ public enum TokenKind
     AssignmentExpression,
 
     // Statements
+    ProgramStatement,
     DeclarationStatement,
     ExpressionStatement,
     IfStatement,
     ElseStatement,
+    ForStatement,
+    WhileStatement,
+    BlockStatement,
+    BreakStatement,
 
     // Keywords
     LetKeyword,
     TrueKeyword,
     FalseKeyword,
     IfKeyword,
-    ElseKeyword
+    ElseKeyword,
+    ForKeyword,
+    WhileKeyword,
+    ToKeyword,
+    StepKeyword,
+    BreakKeyword
 }

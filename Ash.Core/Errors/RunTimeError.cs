@@ -30,13 +30,10 @@ public class RunTimeError : Error
     {
         var result = new StringBuilder();
 
-        var currPosition = PosStart;
         var currContext = Context;
-
         while (currContext != null)
         {
-            result.Append($"File {PosStart.FileName}, line {PosStart.Line}, in {currContext.Name}");
-            currPosition = currContext.ParentPosition;
+            result.AppendLine($"File {PosStart.FileName}, in {currContext.Name}. {PosStart.Line}:{PosStart.Column}");
             currContext = currContext.Parent;
         }
 

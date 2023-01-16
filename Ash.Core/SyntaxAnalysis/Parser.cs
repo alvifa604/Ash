@@ -1,4 +1,5 @@
 using Ash.Core.Errors;
+using Ash.Core.Interpretation;
 using Ash.Core.LexicalAnalysis;
 using Ash.Core.SyntaxAnalysis.Expressions;
 using Ash.Core.SyntaxAnalysis.Statements;
@@ -31,6 +32,10 @@ internal sealed class Parser
         {
             TokenKind.LetKeyword => ParseDeclarationStatement(),
             TokenKind.IfKeyword => ParseIfStatement(),
+            TokenKind.ForKeyword => ParseForStatement(),
+            TokenKind.WhileKeyword => ParseWhileStatement(),
+            TokenKind.OpenBraceToken => ParseBlockStatement(),
+            TokenKind.BreakKeyword => ParseBreakStatement(),
             _ => ParseExpressionStatement()
         };
     }
@@ -41,6 +46,7 @@ internal sealed class Parser
         var identifier = MatchToken(TokenKind.IdentifierToken);
         var equalsToken = MatchToken(TokenKind.AssignmentToken);
         var expression = ParseExpression();
+        MatchToken(TokenKind.SemicolonToken);
         return new DeclarationStatement(letToken, identifier, equalsToken, expression, letToken.Start,
             expression.End);
     }
@@ -49,24 +55,70 @@ internal sealed class Parser
     {
         var ifToken = MatchToken(TokenKind.IfKeyword);
         var condition = ParseExpression();
-        MatchToken(TokenKind.OpenBraceToken);
         var body = ParseStatement();
-        var closeBraceToken = MatchToken(TokenKind.CloseBraceToken);
 
         if (Current.Kind is not TokenKind.ElseKeyword)
-            return new IfStatement(ifToken, condition, body, closeBraceToken.End);
+            return new IfStatement(ifToken, condition, body);
 
         var elseStatement = ParseElseStatement();
-        return new IfStatement(ifToken, condition, body, ifToken.Start, elseStatement);
+        return new IfStatement(ifToken, condition, body, elseStatement);
     }
 
     private ElseStatement ParseElseStatement()
     {
         var elseToken = MatchToken(TokenKind.ElseKeyword);
-        MatchToken(TokenKind.OpenBraceToken);
+        var body = ParseStatement();
+        return new ElseStatement(elseToken, body);
+    }
+
+    private Statement ParseForStatement()
+    {
+        var forKeyword = MatchToken(TokenKind.ForKeyword);
+        MatchToken(TokenKind.OpenParenthesisToken);
+        var lowerBoundDeclaration = ParseDeclarationStatement();
+        var toKeyword = MatchToken(TokenKind.ToKeyword);
+        var upperBound = ParseExpression();
+        Statement body;
+
+        if (Peek(1).Kind is TokenKind.StepKeyword)
+        {
+            MatchToken(TokenKind.SemicolonToken);
+            var stepKeyword = MatchToken(TokenKind.StepKeyword);
+            var step = ParseExpression();
+            MatchToken(TokenKind.CloseParenthesisToken);
+            body = ParseStatement();
+
+            return new ForStatement(forKeyword, lowerBoundDeclaration, toKeyword, upperBound, body, stepKeyword, step);
+        }
+
+        MatchToken(TokenKind.CloseParenthesisToken);
+        body = ParseStatement();
+        return new ForStatement(forKeyword, lowerBoundDeclaration, toKeyword, upperBound, body);
+    }
+
+    private Statement ParseWhileStatement()
+    {
+        var whileToken = MatchToken(TokenKind.WhileKeyword);
+        MatchToken(TokenKind.OpenParenthesisToken);
+        var condition = ParseExpression();
+        MatchToken(TokenKind.CloseParenthesisToken);
+        var body = ParseStatement();
+        return new WhileStatement(whileToken, condition, body);
+    }
+
+    private Statement ParseBlockStatement()
+    {
+        var openBraceToken = MatchToken(TokenKind.OpenBraceToken);
         var body = ParseStatement();
         var closeBraceToken = MatchToken(TokenKind.CloseBraceToken);
-        return new ElseStatement(elseToken, body, closeBraceToken.End);
+        return new BlockStatement(body, openBraceToken, closeBraceToken);
+    }
+
+    private Statement ParseBreakStatement()
+    {
+        var breakToken = MatchToken(TokenKind.BreakKeyword);
+        MatchToken(TokenKind.SemicolonToken);
+        return new BreakStatement(breakToken);
     }
 
     private Statement ParseExpressionStatement()
@@ -87,6 +139,7 @@ internal sealed class Parser
             var identifier = MatchToken(TokenKind.IdentifierToken);
             var equalsToken = MatchToken(TokenKind.AssignmentToken);
             var expression = ParseExpression();
+            MatchToken(TokenKind.SemicolonToken);
             return new AssignmentExpression(identifier, equalsToken, expression);
         }
 
@@ -107,9 +160,7 @@ internal sealed class Parser
         }
         else
         {
-            left = Current.Kind is TokenKind.LetKeyword
-                ? ParseAssignmentExpression()
-                : ParsePrimaryExpression();
+            left = ParsePrimaryExpression();
         }
 
         while (true)
@@ -191,24 +242,14 @@ internal sealed class Parser
     {
         if (Current.Kind == kind) return NextToken();
 
-        ErrorsBag.ReportInvalidSyntax($"Expected '{kind.GetText()}', but found '{Current.Kind.GetText()}'",
+        var expected = kind == TokenKind.IdentifierToken
+            ? "identifier"
+            : kind.GetText();
+        var got = Current.Kind.GetText() ?? Current.Text;
+
+        ErrorsBag.ReportInvalidSyntax($"Expected '{expected}', but found '{got}'",
             Current.Start!,
             Current.End);
         return new Token(kind, Current.Text, Current.Start, Current.End, "");
-    }
-}
-
-internal class ExpressionStatement : Statement
-{
-    public override TokenKind Kind => TokenKind.ExpressionStatement;
-    public Expression Expression { get; }
-    public override Position Start { get; }
-    public override Position End { get; }
-
-    public ExpressionStatement(Expression expression)
-    {
-        Expression = expression;
-        Start = expression.Start;
-        End = expression.End;
     }
 }
