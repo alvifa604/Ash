@@ -1,6 +1,8 @@
 using Ash.Core.Errors;
+using Ash.Core.Interpretation;
 using Ash.Core.LexicalAnalysis;
 using Ash.Core.SyntaxAnalysis.Expressions;
+using Ash.Core.SyntaxAnalysis.Statements;
 
 namespace Ash.Core.SyntaxAnalysis;
 
@@ -19,9 +21,203 @@ internal sealed class Parser
 
     public SyntaxTree Parse()
     {
-        var root = ParseExpression();
+        var root = ParseAll();
         var endOfFileToken = MatchToken(TokenKind.EndOfFileToken);
         return new SyntaxTree(root, ErrorsBag, endOfFileToken);
+    }
+
+    private Statement? ParseAll()
+    {
+        return Current.Kind == TokenKind.FunctionKeyword
+            ? ParseFunctionDeclarationStatement()
+            : ParseStatement();
+    }
+
+    private Statement ParseStatement()
+    {
+        return Current.Kind switch
+        {
+            TokenKind.LetKeyword or TokenKind.IntegerKeyword or TokenKind.BooleanKeyword or TokenKind.DoubleKeyword =>
+                ParseDeclarationStatement(),
+            TokenKind.IfKeyword => ParseIfStatement(),
+            TokenKind.ForKeyword => ParseForStatement(),
+            TokenKind.WhileKeyword => ParseWhileStatement(),
+            TokenKind.OpenBraceToken => ParseBlockStatement(),
+            TokenKind.BreakKeyword => ParseBreakStatement(),
+            _ => ParseExpressionStatement()
+        };
+    }
+
+    private DeclarationStatement ParseDeclarationStatement()
+    {
+        return Current.Kind switch
+        {
+            TokenKind.IntegerKeyword => ParseDeclaration(TokenKind.IntegerKeyword, SymbolType.Integer),
+            TokenKind.DoubleKeyword => ParseDeclaration(TokenKind.DoubleKeyword, SymbolType.Double),
+            TokenKind.BooleanKeyword => ParseDeclaration(TokenKind.BooleanKeyword, SymbolType.Boolean),
+            _ => ParseDeclaration(TokenKind.LetKeyword, SymbolType.Any)
+        };
+    }
+
+    private DeclarationStatement ParseDeclaration(TokenKind keyword, SymbolType symbolType)
+    {
+        var keywordToken = MatchToken(keyword);
+        var identifierToken = MatchToken(TokenKind.IdentifierToken);
+        if (Current.Kind is TokenKind.SemicolonToken)
+        {
+            var semicolonToken = MatchToken(TokenKind.SemicolonToken);
+            return new DeclarationStatement(keywordToken, identifierToken, null, null, keywordToken.Start,
+                semicolonToken.End, symbolType);
+        }
+
+        var equalsToken = MatchToken(TokenKind.AssignmentToken);
+        var expression = ParseExpression();
+        MatchToken(TokenKind.SemicolonToken);
+        return new DeclarationStatement(keywordToken, identifierToken, equalsToken, expression, keywordToken.Start,
+            expression.End, symbolType);
+    }
+
+    private IfStatement ParseIfStatement()
+    {
+        var ifToken = MatchToken(TokenKind.IfKeyword);
+        var condition = ParseExpression();
+        var body = ParseStatement();
+
+        if (Current.Kind is not TokenKind.ElseKeyword)
+            return new IfStatement(ifToken, condition, body);
+
+        var elseStatement = ParseElseStatement();
+        return new IfStatement(ifToken, condition, body, elseStatement);
+    }
+
+    private ElseStatement ParseElseStatement()
+    {
+        var elseToken = MatchToken(TokenKind.ElseKeyword);
+        var body = ParseStatement();
+        return new ElseStatement(elseToken, body);
+    }
+
+    private ForStatement ParseForStatement()
+    {
+        var forKeyword = MatchToken(TokenKind.ForKeyword);
+        MatchToken(TokenKind.OpenParenthesisToken);
+        var lowerBoundDeclaration = ParseDeclarationStatement();
+        var toKeyword = MatchToken(TokenKind.ToKeyword);
+        var upperBound = ParseExpression();
+        Statement body;
+
+        if (Peek(1).Kind is TokenKind.StepKeyword)
+        {
+            MatchToken(TokenKind.SemicolonToken);
+            var stepKeyword = MatchToken(TokenKind.StepKeyword);
+            var step = ParseExpression();
+            MatchToken(TokenKind.CloseParenthesisToken);
+            body = ParseStatement();
+
+            return new ForStatement(forKeyword, lowerBoundDeclaration, toKeyword, upperBound, body, stepKeyword, step);
+        }
+
+        MatchToken(TokenKind.CloseParenthesisToken);
+        body = ParseStatement();
+        return new ForStatement(forKeyword, lowerBoundDeclaration, toKeyword, upperBound, body);
+    }
+
+    private WhileStatement ParseWhileStatement()
+    {
+        var whileToken = MatchToken(TokenKind.WhileKeyword);
+        MatchToken(TokenKind.OpenParenthesisToken);
+        var condition = ParseExpression();
+        MatchToken(TokenKind.CloseParenthesisToken);
+        var body = ParseStatement();
+        return new WhileStatement(whileToken, condition, body);
+    }
+
+    private BlockStatement ParseBlockStatement()
+    {
+        var openBraceToken = MatchToken(TokenKind.OpenBraceToken);
+        var body = ParseStatement();
+        var closeBraceToken = MatchToken(TokenKind.CloseBraceToken);
+        return new BlockStatement(body, openBraceToken, closeBraceToken);
+    }
+
+    private BreakStatement ParseBreakStatement()
+    {
+        var breakToken = MatchToken(TokenKind.BreakKeyword);
+        MatchToken(TokenKind.SemicolonToken);
+        return new BreakStatement(breakToken);
+    }
+
+    private FunctionDeclarationStatement? ParseFunctionDeclarationStatement()
+    {
+        var keyword = MatchToken(TokenKind.FunctionKeyword);
+        var identifier = MatchToken(TokenKind.IdentifierToken);
+        MatchToken(TokenKind.OpenParenthesisToken);
+        var parameters = ParseParameterList();
+        if (parameters is null)
+            return null;
+        MatchToken(TokenKind.CloseParenthesisToken);
+        var body = ParseBlockStatement();
+
+        return new FunctionDeclarationStatement(keyword, identifier, parameters, body);
+    }
+
+    private List<ParameterNode>? ParseParameterList()
+    {
+        var parameters = new List<ParameterNode>();
+        var parseMore = true;
+
+        while (parseMore && Current.Kind is not (TokenKind.CloseParenthesisToken or TokenKind.EndOfFileToken))
+        {
+            var parameter = ParseParameter();
+            if (parameter is null)
+                return null;
+            if (Current.Kind is TokenKind.CloseParenthesisToken)
+            {
+                parameters.Add(parameter);
+                parseMore = false;
+            }
+            else
+            {
+                MatchToken(TokenKind.CommaToken);
+                parameters.Add(parameter);
+            }
+        }
+
+        return parameters;
+    }
+
+    private ParameterNode? ParseParameter()
+    {
+        var tokenType = ParseType();
+        if (tokenType is null)
+        {
+            ErrorsBag.ReportInvalidSyntax("Parameters must specify the type", Current.Start, Current.End);
+            return null;
+        }
+
+        var type = tokenType.Kind.GetSymbolType();
+        if (type is null or SymbolType.Any)
+        {
+            ErrorsBag.ReportInvalidSyntax("Parameters must specify the type", Current.Start, Current.End);
+            return null;
+        }
+
+        var identifier = MatchToken(TokenKind.IdentifierToken);
+        return new ParameterNode(identifier, type.Value);
+    }
+
+    private Token? ParseType()
+    {
+        return Current.Kind is TokenKind.IntegerKeyword or TokenKind.DoubleKeyword or TokenKind.BooleanKeyword
+            ? NextToken()
+            : null;
+    }
+
+    private Statement ParseExpressionStatement()
+    {
+        var expression = ParseExpression();
+        MatchToken(TokenKind.SemicolonToken);
+        return new ExpressionStatement(expression);
     }
 
     private Expression ParseExpression()
@@ -31,26 +227,56 @@ internal sealed class Parser
 
     private Expression ParseAssignmentExpression()
     {
-        if (Current.Kind is TokenKind.IdentifierToken && Peek(1).Kind is TokenKind.AssignmentToken)
-        {
-            var identifier = MatchToken(TokenKind.IdentifierToken);
-            var equalsToken = MatchToken(TokenKind.AssignmentToken);
-            var expression = ParseExpression();
-            return new ReAssignmentExpression(identifier, equalsToken, expression, identifier.Start,
-                expression.End);
-        }
-
-        if (Current.Kind is TokenKind.LetKeyword)
-        {
-            var letToken = MatchToken(TokenKind.LetKeyword);
-            var identifier = MatchToken(TokenKind.IdentifierToken);
-            var equalsToken = MatchToken(TokenKind.AssignmentToken);
-            var expression = ParseExpression();
-            return new AssignmentExpression(letToken, identifier, equalsToken, expression, letToken.Start,
-                expression.End);
-        }
+        if (Current.Kind is TokenKind.IdentifierToken)
+            switch (Peek(1).Kind)
+            {
+                case TokenKind.AssignmentToken:
+                {
+                    var identifier = MatchToken(TokenKind.IdentifierToken);
+                    var equalsToken = MatchToken(TokenKind.AssignmentToken);
+                    var expression = ParseExpression();
+                    return new AssignmentExpression(identifier, equalsToken, expression);
+                }
+                case TokenKind.OpenParenthesisToken:
+                {
+                    var identifier = MatchToken(TokenKind.IdentifierToken);
+                    MatchToken(TokenKind.OpenParenthesisToken);
+                    var arguments = ParseArgumentList();
+                    MatchToken(TokenKind.CloseParenthesisToken);
+                    return new FunctionCallExpression(identifier, arguments);
+                }
+            }
 
         return ParseBinaryExpression();
+    }
+
+    private List<ArgumentExpression> ParseArgumentList()
+    {
+        var arguments = new List<ArgumentExpression>();
+        var parseMore = true;
+
+        while (parseMore && Current.Kind is not (TokenKind.CloseBraceToken or TokenKind.EndOfFileToken))
+        {
+            //var argumentToken = NextToken();
+            var aExpression = ParseExpression();
+            if (Current.Kind is TokenKind.SemicolonToken)
+                break;
+
+            var argumentExpression = new ArgumentExpression(aExpression);
+            if (Current.Kind is TokenKind.CloseParenthesisToken)
+            {
+                arguments.Add(argumentExpression);
+                parseMore = false;
+            }
+
+            else
+            {
+                MatchToken(TokenKind.CommaToken);
+                arguments.Add(argumentExpression);
+            }
+        }
+
+        return arguments;
     }
 
     private Expression ParseBinaryExpression(int parentPriority = 0)
@@ -67,9 +293,7 @@ internal sealed class Parser
         }
         else
         {
-            left = Current.Kind is TokenKind.LetKeyword
-                ? ParseAssignmentExpression()
-                : ParsePrimaryExpression();
+            left = ParsePrimaryExpression();
         }
 
         while (true)
@@ -151,7 +375,13 @@ internal sealed class Parser
     {
         if (Current.Kind == kind) return NextToken();
 
-        ErrorsBag.ReportInvalidSyntax($"Expected token of kind {kind}, but found {Current.Kind}", Current.Start!,
+        var expected = kind == TokenKind.IdentifierToken
+            ? "identifier"
+            : kind.GetText();
+        var got = Current.Kind.GetText() ?? Current.Text;
+
+        ErrorsBag.ReportInvalidSyntax($"Expected '{expected}', but found '{got}'",
+            Current.Start,
             Current.End);
         return new Token(kind, Current.Text, Current.Start, Current.End, "");
     }

@@ -1,3 +1,5 @@
+using Ash.Core.Interpretation;
+
 namespace Ash.Core.LexicalAnalysis;
 
 public static class Extensions
@@ -10,9 +12,37 @@ public static class Extensions
             TokenKind.MinusToken => "-",
             TokenKind.MultiplicationToken => "*",
             TokenKind.DivisionToken => "/",
+            TokenKind.ExponentiationToken => "^",
             TokenKind.OpenParenthesisToken => "(",
             TokenKind.CloseParenthesisToken => ")",
+            TokenKind.OpenBraceToken => "{",
+            TokenKind.CloseBraceToken => "}",
+            TokenKind.SemicolonToken => ";",
+            TokenKind.CommaToken => ",",
+            TokenKind.AssignmentToken => "=",
+            TokenKind.GreaterThanToken => ">",
+            TokenKind.LessThanToken => "<",
+            TokenKind.GreaterThanOrEqualToken => ">=",
+            TokenKind.LessThanOrEqualToken => "<=",
+            TokenKind.EqualsToken => "==",
+            TokenKind.LogicalNotToken => "!",
+            TokenKind.LogicalAndToken => "&&",
+            TokenKind.LogicalOrToken => "||",
+            TokenKind.TrueKeyword => "true",
+            TokenKind.FalseKeyword => "false",
+            TokenKind.IntegerKeyword => "integer",
+            TokenKind.DoubleKeyword => "double",
+            TokenKind.BooleanKeyword => "boolean",
             TokenKind.LetKeyword => "let",
+            TokenKind.IfKeyword => "if",
+            TokenKind.ElseKeyword => "else",
+            TokenKind.ForKeyword => "for",
+            TokenKind.ToKeyword => "to",
+            TokenKind.StepKeyword => "step",
+            TokenKind.WhileKeyword => "while",
+            TokenKind.BreakKeyword => "break",
+            TokenKind.FunctionKeyword => "function",
+            TokenKind.EndOfFileToken => "end of file",
             _ => null
         };
     }
@@ -45,10 +75,33 @@ public static class Extensions
     {
         return text switch
         {
+            "integer" => TokenKind.IntegerKeyword,
+            "double" => TokenKind.DoubleKeyword,
+            "boolean" => TokenKind.BooleanKeyword,
             "let" => TokenKind.LetKeyword,
             "true" => TokenKind.TrueKeyword,
             "false" => TokenKind.FalseKeyword,
+            "if" => TokenKind.IfKeyword,
+            "else" => TokenKind.ElseKeyword,
+            "for" => TokenKind.ForKeyword,
+            "to" => TokenKind.ToKeyword,
+            "step" => TokenKind.StepKeyword,
+            "while" => TokenKind.WhileKeyword,
+            "break" => TokenKind.BreakKeyword,
+            "function" => TokenKind.FunctionKeyword,
             _ => TokenKind.IdentifierToken
+        };
+    }
+
+    public static SymbolType? GetSymbolType(this TokenKind kind)
+    {
+        return kind switch
+        {
+            TokenKind.IntegerToken or TokenKind.IntegerKeyword => SymbolType.Integer,
+            TokenKind.DoubleToken or TokenKind.DoubleKeyword => SymbolType.Double,
+            TokenKind.TrueKeyword or TokenKind.FalseKeyword or TokenKind.BooleanKeyword => SymbolType.Boolean,
+            TokenKind.FunctionKeyword => SymbolType.Function,
+            _ => SymbolType.Any
         };
     }
 }

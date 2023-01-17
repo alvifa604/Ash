@@ -1,7 +1,9 @@
 using Ash.Core.Errors;
+using Ash.Core.Interpretation.Symbols;
 using Ash.Core.LexicalAnalysis;
 using Ash.Core.SyntaxAnalysis;
 using Ash.Core.SyntaxAnalysis.Expressions;
+using Ash.Core.SyntaxAnalysis.Statements;
 
 namespace Ash.Core.Interpretation;
 
@@ -19,95 +21,355 @@ internal sealed class Interpreter
 
     public InterpreterResult Interpret()
     {
-        var result = Visit(_tree.Root!);
+        var result = VisitStatement(_tree.Root!, _context);
         return new InterpreterResult(result, _errorsBag);
     }
 
-    private object? Visit(Expression node)
+    private object? VisitStatement(Node node, Context context)
     {
         return node switch
         {
-            BinaryExpression binary => VisitBinary(binary),
-            UnaryExpression unary => VisitUnary(unary),
-            ParenthesizedExpression parenthesized => VisitParenthesized(parenthesized),
-            AssignmentExpression assignment => VisitAssignment(assignment),
-            ReAssignmentExpression reAssignment => VisitReAssignment(reAssignment),
-            LiteralExpression number => VisitLiteral(number),
-            _ => VisitVariable((VariableExpression)node)
+            DeclarationStatement assignment => VisitDeclaration(assignment, context),
+            IfStatement ifStatement => VisitIfStatement(ifStatement, context),
+            ElseStatement elseStatement => VisitElseStatement(elseStatement, context),
+            ForStatement forStatement => VisitForStatement(forStatement, context),
+            WhileStatement whileStatement => VisitWhileStatement(whileStatement, context),
+            BreakStatement breakStatement => breakStatement,
+            ExpressionStatement expression => VisitExpression(expression.Expression, context),
+            BlockStatement block => VisitStatement(block.Body, context),
+            FunctionDeclarationStatement functionDeclaration => VisitFunctionDeclaration(functionDeclaration, context),
+            _ => VisitExpression(node, context)
         };
     }
 
-    private object? VisitReAssignment(ReAssignmentExpression reAssignment)
+    private object? VisitDeclaration(DeclarationStatement declaration, Context context)
     {
-        var variableName = reAssignment.IdentifierToken.Text;
-        var variableExists = _context.Symbols[variableName] != null;
-        if (!variableExists)
+        var variableName = declaration.IdentifierToken.Text;
+        var variableExists = context.Symbols[variableName] != null;
+        if (variableExists)
         {
-            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, reAssignment.Start,
-                reAssignment.End);
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is already defined.", context,
+                declaration.Start, declaration.End);
             return null;
         }
 
-        var value = Visit(reAssignment.Expression);
+        if (declaration.Expression is null)
+        {
+            var defaultValue = declaration.SymbolType.DefaultValue();
+            context.Symbols[variableName] = new VariableSymbol(declaration.SymbolType, defaultValue);
+            return defaultValue;
+        }
 
-        var newType = value?.GetType();
-        var prevType = _context.Symbols[variableName]?.GetType();
+        var value = VisitExpression(declaration.Expression, context);
+        var type = value?.MatchType();
+        if (type is null)
+        {
+            _errorsBag.ReportRunTimeError($"Cannot infer type of variable '{variableName}'.", context,
+                declaration.Start, declaration.End);
+            return null;
+        }
+
+        var variableSymbol = new VariableSymbol(type.Value, value);
+        context.Symbols[variableName] = variableSymbol;
+        return value;
+    }
+
+    private object? VisitIfStatement(IfStatement ifStatement, Context context)
+    {
+        var localContext = new Context("If", context);
+        var condition = VisitExpression(ifStatement.Condition, context);
+        if (condition is not bool booleanCondition)
+        {
+            _errorsBag.ReportRunTimeError("Condition must be a boolean.", context,
+                ifStatement.Condition.Start, ifStatement.Condition.End);
+            return null;
+        }
+
+        if (booleanCondition)
+            return VisitStatement(ifStatement.Body, localContext);
+        return ifStatement.ElseStatement != null
+            ? VisitStatement(ifStatement.ElseStatement, localContext)
+            : "";
+    }
+
+    private object? VisitElseStatement(ElseStatement elseStatement, Context context)
+    {
+        return VisitStatement(elseStatement.Body, context);
+    }
+
+    private object? VisitForStatement(ForStatement forStatement, Context context)
+    {
+        var lowerBoundVariable = forStatement.LowerBoundDeclaration.IdentifierToken.Text;
+        var lowerBound = VisitDeclaration(forStatement.LowerBoundDeclaration, context);
+        if (lowerBound is not int lower)
+        {
+            _errorsBag.ReportRunTimeError("Lower bound must be an integer", context,
+                forStatement.LowerBoundDeclaration.Start, forStatement.LowerBoundDeclaration.End);
+            return null;
+        }
+
+        var upperBound = VisitExpression(forStatement.UpperBound, context);
+        if (upperBound is not int upper)
+        {
+            _errorsBag.ReportRunTimeError("Upper bound must be an integer", context,
+                forStatement.UpperBound.Start, forStatement.UpperBound.End);
+            return null;
+        }
+
+        if (forStatement.Step is null)
+        {
+            if (lower > upper)
+                for (var i = lower; i > upper; i--)
+                {
+                    context.Symbols.Add(lowerBoundVariable, new VariableSymbol(SymbolType.Integer, i));
+                    var result = VisitStatement(forStatement.Body, context);
+                    if (result is null) return null;
+                    if (result is BreakStatement) break;
+                }
+            else
+                for (var i = lower; i < upper; i++)
+                {
+                    context.Symbols.Add(lowerBoundVariable, new VariableSymbol(SymbolType.Integer, i));
+                    var result = VisitStatement(forStatement.Body, context);
+                    if (result is null) return null;
+                    if (result is BreakStatement) break;
+                }
+        }
+        else
+        {
+            var step = VisitExpression(forStatement.Step, context);
+            if (step is not int stepValue)
+            {
+                _errorsBag.ReportRunTimeError("Step must be an integer", context,
+                    forStatement.Step.Start, forStatement.Step.End);
+                return null;
+            }
+
+            if (stepValue < 1)
+            {
+                _errorsBag.ReportRunTimeError("Step cannot be less than 1", context,
+                    forStatement.Step.Start, forStatement.Step.End);
+                return null;
+            }
+
+            if (lower > upper)
+                for (var i = lower; i > upper; i -= stepValue)
+                {
+                    context.Symbols.Add(lowerBoundVariable, new VariableSymbol(SymbolType.Integer, i));
+                    var result = VisitStatement(forStatement.Body, context);
+                    Console.WriteLine(result);
+                    if (result is null) return null;
+                    if (result is BreakStatement) break;
+                }
+            else
+                for (var i = lower; i < upper; i += stepValue)
+                {
+                    context.Symbols.Add(lowerBoundVariable, new VariableSymbol(SymbolType.Integer, i));
+                    var result = VisitStatement(forStatement.Body, context);
+                    Console.WriteLine(result);
+                    if (result is null) return null;
+                    if (result is BreakStatement) break;
+                }
+        }
+
+        context.Symbols.Remove(lowerBoundVariable);
+        return "";
+    }
+
+
+    private object? VisitWhileStatement(WhileStatement whileStatement, Context context)
+    {
+        //var localContext = new Context("while", context);
+        var condition = VisitExpression(whileStatement.Condition, context);
+        if (condition is not bool)
+        {
+            _errorsBag.ReportRunTimeError("Condition must be a boolean.", context,
+                whileStatement.Condition.Start, whileStatement.Condition.End);
+            return null;
+        }
+
+        while ((bool)condition!)
+        {
+            var res = VisitStatement(whileStatement.Body, context);
+            if (res is null) return null;
+            if (res is BreakStatement) break;
+            condition = VisitExpression(whileStatement.Condition, context);
+        }
+
+        return "";
+    }
+
+    private object? VisitFunctionDeclaration(FunctionDeclarationStatement functionDeclaration, Context context)
+    {
+        var functionName = functionDeclaration.IdentifierToken.Text;
+        var functionExists = context.Symbols[functionName] != null;
+        if (functionExists)
+        {
+            _errorsBag.ReportRunTimeError($"Function '{functionName}' is already defined", context,
+                functionDeclaration.Start, functionDeclaration.End);
+            return null;
+        }
+
+        var functionSymbol = new FunctionSymbol(functionDeclaration.ParametersList, functionDeclaration.Body);
+        context.Symbols[functionName] = functionSymbol;
+        return "";
+    }
+
+    private object? VisitExpression(Node node, Context context)
+    {
+        return node switch
+        {
+            BinaryExpression binary => VisitBinary(binary, context),
+            UnaryExpression unary => VisitUnary(unary, context),
+            ParenthesizedExpression parenthesized => VisitParenthesized(parenthesized, context),
+            AssignmentExpression assignment => VisitAssignment(assignment, context),
+            LiteralExpression number => VisitLiteral(number, context),
+            FunctionCallExpression function => VisitFunctionCall(function, context),
+            _ => VisitVariable((VariableExpression)node, context)
+        };
+    }
+
+    private object? VisitAssignment(AssignmentExpression assignment, Context context)
+    {
+        var variableName = assignment.IdentifierToken.Text;
+        var variableExists = context.Symbols[variableName] != null;
+        if (!variableExists)
+        {
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", context, assignment.Start,
+                assignment.End);
+            return null;
+        }
+
+        var value = VisitExpression(assignment.Expression, context);
+
+        if (value is null) return null;
+
+        var newType = value.MatchType();
+        var prevType = context.Symbols[variableName]?.SymbolType;
+
+        if (prevType is SymbolType.Any)
+            prevType = newType;
 
         // Prevents reassignment of different types
         if (newType != prevType)
         {
-            _errorsBag.ReportRunTimeError($"Type {newType?.Name} cannot be assigned to type {prevType?.Name}",
-                _context, reAssignment.Start,
-                reAssignment.End);
+            _errorsBag.ReportRunTimeError($"Type {newType} cannot be assigned to type {prevType}",
+                context, assignment.Start,
+                assignment.End);
             return null;
         }
 
-        _context.Symbols[variableName] = value;
+        var variableSymbol = new VariableSymbol(newType, value);
+        context.Symbols[variableName] = variableSymbol;
         return value;
     }
 
-    private object? VisitAssignment(AssignmentExpression assignment)
-    {
-        var variableName = assignment.IdentifierToken.Text;
-        var variableExists = _context.Symbols[variableName] != null;
-        if (variableExists)
-        {
-            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is already defined.", _context,
-                assignment.Start, assignment.End);
-            return null;
-        }
-
-        var value = Visit(assignment.Expression);
-        _context.Symbols[variableName] = value;
-        return value;
-    }
-
-    private object? VisitVariable(VariableExpression variable)
+    private object? VisitVariable(VariableExpression variable, Context context)
     {
         var variableName = variable.IdentifierToken.Text;
-        var variableExists = _context.Symbols[variableName] != null;
-        if (variableExists)
-            return _context.Symbols[variableName];
+        var existingVar = context.Symbols[variableName];
+        if (existingVar == null)
+        {
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined", context, variable.Start,
+                variable.End);
+            return null;
+        }
 
-        _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", _context, variable.Start,
+        if (existingVar.SymbolType is not SymbolType.Any)
+            return existingVar.Value;
+
+        _errorsBag.ReportRunTimeError($"Variable '{variableName}' has not been initialised", context, variable.Start,
             variable.End);
         return null;
     }
 
-    private object? VisitLiteral(LiteralExpression literal)
+    private object? VisitLiteral(LiteralExpression literal, Context context)
     {
         return literal.Value;
     }
 
-    private object? VisitParenthesized(ParenthesizedExpression parenthesized)
+    private object? VisitFunctionCall(FunctionCallExpression function, Context context)
     {
-        return Visit(parenthesized.Expression);
+        var localContext = new Context("function", context);
+        var functionName = function.IdentifierToken.Text;
+        var functionExists = localContext.Symbols[functionName] != null;
+        if (!functionExists)
+        {
+            _errorsBag.ReportRunTimeError($"Function '{functionName}' is not defined.", localContext, function.Start,
+                function.End);
+            return null;
+        }
+
+        var functionSymbol = (FunctionSymbol)localContext.Symbols[functionName]!;
+        var parameters = functionSymbol.ParametersList;
+        var arguments = function.Arguments;
+        if (parameters.Count != arguments.Count)
+        {
+            _errorsBag.ReportRunTimeError(
+                $"'{functionName}' expects {parameters.Count} arguments, but {arguments.Count} were provided",
+                localContext,
+                function.Start,
+                function.End);
+            return null;
+        }
+
+        for (var i = 0; i < parameters.Count; i++)
+        {
+            var parameter = parameters[i];
+            var argumentExpression = arguments[i];
+            var argumentValue = VisitExpression(argumentExpression.Argument, localContext);
+
+            if (argumentValue is null) return null;
+            var argumentType = argumentValue.MatchType();
+
+            if (parameter.SymbolType != argumentType)
+            {
+                _errorsBag.ReportRunTimeError(
+                    $"Argument {i + 1} of '{functionName}' is of type {argumentType}, but {parameter.SymbolType} was expected",
+                    localContext, function.Start,
+                    function.End);
+                return null;
+            }
+
+            VariableSymbol parameterSymbol;
+            switch (argumentValue)
+            {
+                case int avi:
+                    parameterSymbol = new VariableSymbol(SymbolType.Integer, avi);
+                    localContext.Symbols[parameter.IdentifierToken.Text] = parameterSymbol;
+                    break;
+                case double avd:
+                    parameterSymbol = new VariableSymbol(SymbolType.Double, avd);
+                    localContext.Symbols[parameter.IdentifierToken.Text] = parameterSymbol;
+                    break;
+                case bool avb:
+                    parameterSymbol = new VariableSymbol(SymbolType.Boolean, avb);
+                    localContext.Symbols[parameter.IdentifierToken.Text] = parameterSymbol;
+                    break;
+                default:
+                    _errorsBag.ReportRunTimeError("Unsupported argument type", localContext, function.Start,
+                        function.End);
+                    return null;
+            }
+        }
+
+        var result = VisitStatement(functionSymbol.Value, localContext);
+
+        foreach (var parameter in functionSymbol.ParametersList)
+            localContext.Symbols.Remove(parameter.IdentifierToken.Text);
+
+        return result;
     }
 
-    private object? VisitUnary(UnaryExpression unary)
+    private object? VisitParenthesized(ParenthesizedExpression parenthesized, Context context)
+    {
+        return VisitExpression(parenthesized.Expression, context);
+    }
+
+    private object? VisitUnary(UnaryExpression unary, Context context)
     {
         var op = unary.OperatorToken;
-        var expression = Visit(unary.Expression);
+        var expression = VisitExpression(unary.Expression, context);
 
         if (expression is null) return null;
 
@@ -153,10 +415,10 @@ internal sealed class Interpreter
         }
     }
 
-    private object? VisitBinary(BinaryExpression binary)
+    private object? VisitBinary(BinaryExpression binary, Context context)
     {
-        var left = Visit(binary.Left);
-        var right = Visit(binary.Right);
+        var left = VisitExpression(binary.Left, context);
+        var right = VisitExpression(binary.Right, context);
 
         if (left is null || right is null)
             return null;
@@ -164,7 +426,7 @@ internal sealed class Interpreter
         switch (left)
         {
             case (double or int) when right is (double or int):
-                return HandleNumbersOperators(left, right, binary);
+                return HandleNumbersOperators(left, right, binary, context);
             case bool when right is bool:
                 return HandleBooleanBinaryOperators(left, right, binary);
             default:
@@ -193,7 +455,7 @@ internal sealed class Interpreter
         }
     }
 
-    private object? HandleNumbersOperators(dynamic left, dynamic right, BinaryExpression binary)
+    private object? HandleNumbersOperators(dynamic left, dynamic right, BinaryExpression binary, Context context)
     {
         switch (binary.OperatorToken.Kind)
         {
@@ -206,13 +468,13 @@ internal sealed class Interpreter
             case TokenKind.ExponentiationToken:
                 if (left != 0)
                     return Math.Pow(left, right) is double d1 ? Math.Round(d1, 8) : Math.Pow(left, right);
-                _errorsBag.ReportRunTimeError("The base cannot be zero", _context, binary.Right.Start,
+                _errorsBag.ReportRunTimeError("The base cannot be zero", context, binary.Right.Start,
                     binary.Right.End);
                 return null;
             case TokenKind.DivisionToken:
                 if (right != 0)
                     return left / right is double d2 ? Math.Round(d2, 8) : left / right;
-                _errorsBag.ReportRunTimeError("Division by zero is not allowed", _context, binary.Right.Start,
+                _errorsBag.ReportRunTimeError("Division by zero is not allowed", context, binary.Right.Start,
                     binary.Right.End);
                 return null;
             case TokenKind.EqualsToken:

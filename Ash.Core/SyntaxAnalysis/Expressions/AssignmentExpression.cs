@@ -2,25 +2,21 @@ using Ash.Core.LexicalAnalysis;
 
 namespace Ash.Core.SyntaxAnalysis.Expressions;
 
-public class AssignmentExpression : Expression
+internal class AssignmentExpression : Expression
 {
-    public override TokenKind Kind => TokenKind.AssignmentExpression;
-    public Token LetToken { get; }
     public Token IdentifierToken { get; }
     public Token EqualsToken { get; }
     public Expression Expression { get; }
+    public override TokenKind Kind => TokenKind.AssignmentExpression;
     public override Position Start { get; }
     public override Position End { get; }
 
-    public AssignmentExpression(Token letToken, Token identifierToken, Token equalsToken, Expression expression,
-        Position start,
-        Position end)
+    public AssignmentExpression(Token identifierToken, Token equalsToken, Expression expression)
     {
-        LetToken = letToken;
         IdentifierToken = identifierToken;
         EqualsToken = equalsToken;
         Expression = expression;
-        Start = start;
-        End = end;
+        Start = identifierToken.Start;
+        End = expression.End;
     }
 }

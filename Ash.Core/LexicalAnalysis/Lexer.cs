@@ -96,6 +96,22 @@ internal sealed class Lexer
                 _tokenKind = TokenKind.CloseParenthesisToken;
                 Advance();
                 break;
+            case '{':
+                _tokenKind = TokenKind.OpenBraceToken;
+                Advance();
+                break;
+            case '}':
+                _tokenKind = TokenKind.CloseBraceToken;
+                Advance();
+                break;
+            case ';':
+                _tokenKind = TokenKind.SemicolonToken;
+                Advance();
+                break;
+            case ',':
+                _tokenKind = TokenKind.CommaToken;
+                Advance();
+                break;
             case '>':
                 Advance();
                 if (Current == '=')
@@ -217,7 +233,7 @@ internal sealed class Lexer
         var start = _position.Clone();
         var dotCount = 0;
 
-        while (char.IsDigit(Current) || Current == ',')
+        while (char.IsDigit(Current) || (Current == ',' && Peek(1) != ' '))
         {
             if (Current is ',') dotCount++;
             Advance();

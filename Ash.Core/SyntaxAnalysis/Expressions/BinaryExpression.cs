@@ -26,10 +26,3 @@ public sealed class BinaryExpression : Expression
         return $"({Left} {OperatorToken} {Right})";
     }
 }
-
-public abstract class Expression
-{
-    public abstract TokenKind Kind { get; }
-    public abstract Position Start { get; }
-    public abstract Position End { get; }
-}
