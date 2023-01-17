@@ -101,6 +101,7 @@ When declaring a variable this can be done in different ways:
 
 - Once assigned a type, a variable cannot be changed to another type. [See Types](#Types)
 - Variables of type 'any' cannot be accessed, they need to be initialised first.
+- Variables can be reassigned in a local context, once out of it, the variable will be reset to it's previous value.
 
 #### Specifications:
 
@@ -123,15 +124,24 @@ let example_3 = true;
 example_1 = true // Error
 example_1 = 24;  // Valid
 
-//Typed variables
+// Typed variables
 let anyVariable;     // Any type
-anyVariable;         // Error, varable
+anyVariable;         // Error, variable has not been initialised.
 anyVariable = 23;    // Integer type
 anyVaraible = false  // Error
 
 integer example_4 = 24;      // Integer type
-double example_5 = 2,3;      // Double type
+double  example_5 = 2,3;     // Double type
 boolean example_6 = false;   // Boolean type
+
+// Reassigning variables in a local context
+let example_7 = 23;
+
+{
+    example_7 = 24; // Valid
+}
+
+example_7 => 23
 ```
 
 ### If statements
@@ -253,9 +263,25 @@ function example() {
 
 OR
 
-function example(integer a, double b) {
+function sum(integer a, double b) {
 
    // Do something
 
 }
+```
+
+### Function call
+
+- A function is called with its name and parenthesis that contain the arguments.
+- Must end with a semicolon.
+- The arguments must be separated by a comma.
+- The arguments must be of the same type as the parameters. [See Types](#Types).
+- The arguments must be in the same order as the parameters.
+- The arguments must be of the same amount as the parameters.
+- The result of a function can be assigned to a variable.
+
+```
+example();
+let result  = sum(5, 10);
+integer res = sum(5, 10);
 ```

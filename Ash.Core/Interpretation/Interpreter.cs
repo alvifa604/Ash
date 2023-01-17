@@ -30,14 +30,14 @@ internal sealed class Interpreter
         return node switch
         {
             DeclarationStatement assignment => VisitDeclaration(assignment, context),
+            BlockStatement block => VisitBlockStatement(block, context),
             IfStatement ifStatement => VisitIfStatement(ifStatement, context),
             ElseStatement elseStatement => VisitElseStatement(elseStatement, context),
             ForStatement forStatement => VisitForStatement(forStatement, context),
             WhileStatement whileStatement => VisitWhileStatement(whileStatement, context),
+            FunctionDeclarationStatement functionDeclaration => VisitFunctionDeclaration(functionDeclaration, context),
             BreakStatement breakStatement => breakStatement,
             ExpressionStatement expression => VisitExpression(expression.Expression, context),
-            BlockStatement block => VisitStatement(block.Body, context),
-            FunctionDeclarationStatement functionDeclaration => VisitFunctionDeclaration(functionDeclaration, context),
             _ => VisitExpression(node, context)
         };
     }
@@ -94,9 +94,16 @@ internal sealed class Interpreter
             return value;
         }
 
-        _errorsBag.ReportRunTimeError($"Type {expressionType} cannot be assigned to type {declaration.SymbolType}.", context,
+        _errorsBag.ReportRunTimeError($"Type {expressionType} cannot be assigned to type {declaration.SymbolType}.",
+            context,
             declaration.Start, declaration.End);
         return null;
+    }
+
+    private object? VisitBlockStatement(BlockStatement block, Context context)
+    {
+        var localContext = new Context("local", context);
+        return VisitStatement(block.Body, localContext);
     }
 
     private object? VisitIfStatement(IfStatement ifStatement, Context context)
