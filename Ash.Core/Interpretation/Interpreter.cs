@@ -60,18 +60,43 @@ internal sealed class Interpreter
             return defaultValue;
         }
 
-        var value = VisitExpression(declaration.Expression, context);
-        var type = value?.MatchType();
-        if (type is null)
+        object? value;
+        SymbolType? expressionType;
+        if (declaration.SymbolType == SymbolType.Any)
+        {
+            value = VisitExpression(declaration.Expression, context);
+            expressionType = value?.MatchType();
+            if (expressionType is null)
+            {
+                _errorsBag.ReportRunTimeError($"Cannot infer type of variable '{variableName}'.", context,
+                    declaration.Start, declaration.End);
+                return null;
+            }
+
+            context.Symbols[variableName] = new VariableSymbol(expressionType.Value, value);
+            return value;
+        }
+
+
+        value = VisitExpression(declaration.Expression, context);
+        expressionType = value?.MatchType();
+        if (expressionType is null)
         {
             _errorsBag.ReportRunTimeError($"Cannot infer type of variable '{variableName}'.", context,
                 declaration.Start, declaration.End);
             return null;
         }
 
-        var variableSymbol = new VariableSymbol(type.Value, value);
-        context.Symbols[variableName] = variableSymbol;
-        return value;
+        if (declaration.SymbolType == expressionType)
+        {
+            var variableSymbol = new VariableSymbol(expressionType.Value, value);
+            context.Symbols[variableName] = variableSymbol;
+            return value;
+        }
+
+        _errorsBag.ReportRunTimeError($"Type {expressionType} cannot be assigned to type {declaration.SymbolType}.", context,
+            declaration.Start, declaration.End);
+        return null;
     }
 
     private object? VisitIfStatement(IfStatement ifStatement, Context context)
