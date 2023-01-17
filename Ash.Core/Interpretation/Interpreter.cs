@@ -36,6 +36,7 @@ internal sealed class Interpreter
             BreakStatement breakStatement => breakStatement,
             ExpressionStatement expression => VisitExpression(expression.Expression, context),
             BlockStatement block => VisitStatement(block.Body, context),
+            FunctionDeclarationStatement functionDeclaration => VisitFunctionDeclaration(functionDeclaration, context),
             _ => VisitExpression(node, context)
         };
     }
@@ -181,6 +182,21 @@ internal sealed class Interpreter
         return "";
     }
 
+    private object? VisitFunctionDeclaration(FunctionDeclarationStatement functionDeclaration, Context context)
+    {
+        var functionName = functionDeclaration.IdentifierToken.Text;
+        var functionExists = context.Symbols[functionName] != null;
+        if (functionExists)
+        {
+            _errorsBag.ReportRunTimeError($"Function '{functionName}' is already defined", context,
+                functionDeclaration.Start, functionDeclaration.End);
+            return null;
+        }
+
+        context.Symbols[functionName] = functionDeclaration;
+        return "";
+    }
+
     private object? VisitExpression(Node node, Context context)
     {
         return node switch
@@ -190,6 +206,7 @@ internal sealed class Interpreter
             ParenthesizedExpression parenthesized => VisitParenthesized(parenthesized, context),
             AssignmentExpression assignment => VisitAssignment(assignment, context),
             LiteralExpression number => VisitLiteral(number, context),
+            FunctionCallExpression function => VisitFunctionCall(function, context),
             _ => VisitVariable((VariableExpression)node, context)
         };
     }
@@ -238,6 +255,73 @@ internal sealed class Interpreter
     private object? VisitLiteral(LiteralExpression literal, Context context)
     {
         return literal.Value;
+    }
+
+    private object? VisitFunctionCall(FunctionCallExpression function, Context context)
+    {
+        var localContext = new Context("function", context);
+        var functionName = function.IdentifierToken.Text;
+        var functionExists = localContext.Symbols[functionName] != null;
+        if (!functionExists)
+        {
+            _errorsBag.ReportRunTimeError($"Function '{functionName}' is not defined.", localContext, function.Start,
+                function.End);
+            return null;
+        }
+
+        var functionDeclaration = (FunctionDeclarationStatement)localContext.Symbols[functionName]!;
+        var parameters = functionDeclaration.ParametersList;
+        var arguments = function.Arguments;
+        if (parameters.Count != arguments.Count)
+        {
+            _errorsBag.ReportRunTimeError(
+                $"'{functionName}' expects {parameters.Count} arguments, but {arguments.Count} were provided", localContext,
+                function.Start,
+                function.End);
+            return null;
+        }
+
+        for (var i = 0; i < parameters.Count; i++)
+        {
+            var parameter = parameters[i];
+            var argumentExpression = arguments[i];
+            var argumentValue = VisitExpression(argumentExpression.Argument, localContext);
+
+            if (argumentValue is null) return null;
+            var argumentType = argumentValue switch
+            {
+                int => "integer",
+                double => "double",
+                bool => "boolean",
+                _ => "unknown"
+            };
+
+            switch (parameter.Type.Kind)
+            {
+                case TokenKind.IntegerKeyword when argumentValue is int avi:
+                    localContext.Symbols[parameter.IdentifierToken.Text] = avi;
+                    break;
+                case TokenKind.DoubleKeyword when argumentValue is double avd:
+                    localContext.Symbols[parameter.IdentifierToken.Text] = avd;
+                    break;
+                case TokenKind.BooleanKeyword when argumentValue is bool avb:
+                    localContext.Symbols[parameter.IdentifierToken.Text] = avb;
+                    break;
+                default:
+                    _errorsBag.ReportRunTimeError(
+                        $"Argument {i + 1} of '{functionName}' is of type {argumentType}, but {parameter.Type.Kind.GetText()} was expected",
+                        localContext, function.Start,
+                        function.End);
+                    return null;
+            }
+        }
+
+        var result = VisitStatement(functionDeclaration.Body, localContext);
+
+        foreach (var parameter in functionDeclaration.ParametersList)
+            localContext.Symbols.Remove(parameter.IdentifierToken.Text);
+
+        return result;
     }
 
     private object? VisitParenthesized(ParenthesizedExpression parenthesized, Context context)

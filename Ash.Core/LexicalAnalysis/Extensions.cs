@@ -16,6 +16,7 @@ public static class Extensions
             TokenKind.OpenBraceToken => "{",
             TokenKind.CloseBraceToken => "}",
             TokenKind.SemicolonToken => ";",
+            TokenKind.CommaToken => ",",
             TokenKind.AssignmentToken => "=",
             TokenKind.GreaterThanToken => ">",
             TokenKind.LessThanToken => "<",
@@ -27,6 +28,9 @@ public static class Extensions
             TokenKind.LogicalOrToken => "||",
             TokenKind.TrueKeyword => "true",
             TokenKind.FalseKeyword => "false",
+            TokenKind.IntegerKeyword => "integer",
+            TokenKind.DoubleKeyword => "double",
+            TokenKind.BooleanKeyword => "boolean",
             TokenKind.LetKeyword => "let",
             TokenKind.IfKeyword => "if",
             TokenKind.ElseKeyword => "else",
@@ -35,6 +39,7 @@ public static class Extensions
             TokenKind.StepKeyword => "step",
             TokenKind.WhileKeyword => "while",
             TokenKind.BreakKeyword => "break",
+            TokenKind.FunctionKeyword => "function",
             TokenKind.EndOfFileToken => "end of file",
             _ => null
         };
@@ -68,6 +73,9 @@ public static class Extensions
     {
         return text switch
         {
+            "integer" => TokenKind.IntegerKeyword,
+            "double" => TokenKind.DoubleKeyword,
+            "boolean" => TokenKind.BooleanKeyword,
             "let" => TokenKind.LetKeyword,
             "true" => TokenKind.TrueKeyword,
             "false" => TokenKind.FalseKeyword,
@@ -78,7 +86,20 @@ public static class Extensions
             "step" => TokenKind.StepKeyword,
             "while" => TokenKind.WhileKeyword,
             "break" => TokenKind.BreakKeyword,
+            "function" => TokenKind.FunctionKeyword,
             _ => TokenKind.IdentifierToken
+        };
+    }
+
+    public static TokenKind? GetDataType(this TokenKind kind)
+    {
+        return kind switch
+        {
+            TokenKind.IntegerToken => TokenKind.IntegerKeyword,
+            TokenKind.DoubleToken => TokenKind.DoubleKeyword,
+            TokenKind.TrueKeyword => TokenKind.BooleanKeyword,
+            TokenKind.FalseKeyword => TokenKind.BooleanKeyword,
+            _ => null
         };
     }
 }

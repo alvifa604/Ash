@@ -27,6 +27,7 @@ public enum TokenKind
     OpenBraceToken,
     CloseBraceToken,
     SemicolonToken,
+    CommaToken,
     EndOfFileToken,
     BadToken,
 
@@ -37,9 +38,10 @@ public enum TokenKind
     ParenthesizedExpression,
     VariableExpression,
     AssignmentExpression,
+    FunctionCallExpression,
+    ArgumentExpression,
 
     // Statements
-    ProgramStatement,
     DeclarationStatement,
     ExpressionStatement,
     IfStatement,
@@ -48,6 +50,7 @@ public enum TokenKind
     WhileStatement,
     BlockStatement,
     BreakStatement,
+    FunctionDeclarationStatement,
 
     // Keywords
     LetKeyword,
@@ -59,5 +62,15 @@ public enum TokenKind
     WhileKeyword,
     ToKeyword,
     StepKeyword,
-    BreakKeyword
+    BreakKeyword,
+    FunctionKeyword,
+
+    //Types
+    IntegerKeyword,
+    DoubleKeyword,
+    BooleanKeyword,
+
+    // Others
+    Parameter,
+    BooleanToken
 }
