@@ -1,4 +1,5 @@
 using Ash.Core.Errors;
+using Ash.Core.Interpretation.Symbols;
 using Ash.Core.LexicalAnalysis;
 using Ash.Core.SyntaxAnalysis;
 using Ash.Core.SyntaxAnalysis.Expressions;
@@ -52,8 +53,24 @@ internal sealed class Interpreter
             return null;
         }
 
+        if (declaration.Expression is null)
+        {
+            var defaultValue = declaration.SymbolType.DefaultValue();
+            context.Symbols[variableName] = new VariableSymbol(declaration.SymbolType, defaultValue);
+            return defaultValue;
+        }
+
         var value = VisitExpression(declaration.Expression, context);
-        context.Symbols[variableName] = value;
+        var type = value?.MatchType();
+        if (type is null)
+        {
+            _errorsBag.ReportRunTimeError($"Cannot infer type of variable '{variableName}'.", context,
+                declaration.Start, declaration.End);
+            return null;
+        }
+
+        var variableSymbol = new VariableSymbol(type.Value, value);
+        context.Symbols[variableName] = variableSymbol;
         return value;
     }
 
@@ -104,7 +121,7 @@ internal sealed class Interpreter
             if (lower > upper)
                 for (var i = lower; i > upper; i--)
                 {
-                    context.Symbols[lowerBoundVariable] = i;
+                    context.Symbols.Add(lowerBoundVariable, new VariableSymbol(SymbolType.Integer, i));
                     var result = VisitStatement(forStatement.Body, context);
                     if (result is null) return null;
                     if (result is BreakStatement) break;
@@ -112,7 +129,7 @@ internal sealed class Interpreter
             else
                 for (var i = lower; i < upper; i++)
                 {
-                    context.Symbols[lowerBoundVariable] = i;
+                    context.Symbols.Add(lowerBoundVariable, new VariableSymbol(SymbolType.Integer, i));
                     var result = VisitStatement(forStatement.Body, context);
                     if (result is null) return null;
                     if (result is BreakStatement) break;
@@ -138,7 +155,7 @@ internal sealed class Interpreter
             if (lower > upper)
                 for (var i = lower; i > upper; i -= stepValue)
                 {
-                    context.Symbols[lowerBoundVariable] = i;
+                    context.Symbols.Add(lowerBoundVariable, new VariableSymbol(SymbolType.Integer, i));
                     var result = VisitStatement(forStatement.Body, context);
                     Console.WriteLine(result);
                     if (result is null) return null;
@@ -147,7 +164,7 @@ internal sealed class Interpreter
             else
                 for (var i = lower; i < upper; i += stepValue)
                 {
-                    context.Symbols[lowerBoundVariable] = i;
+                    context.Symbols.Add(lowerBoundVariable, new VariableSymbol(SymbolType.Integer, i));
                     var result = VisitStatement(forStatement.Body, context);
                     Console.WriteLine(result);
                     if (result is null) return null;
@@ -193,7 +210,8 @@ internal sealed class Interpreter
             return null;
         }
 
-        context.Symbols[functionName] = functionDeclaration;
+        var functionSymbol = new FunctionSymbol(functionDeclaration.ParametersList, functionDeclaration.Body);
+        context.Symbols[functionName] = functionSymbol;
         return "";
     }
 
@@ -224,19 +242,25 @@ internal sealed class Interpreter
 
         var value = VisitExpression(assignment.Expression, context);
 
-        var newType = value?.GetType();
-        var prevType = context.Symbols[variableName]?.GetType();
+        if (value is null) return null;
+
+        var newType = value.MatchType();
+        var prevType = context.Symbols[variableName]?.SymbolType;
+
+        if (prevType is SymbolType.Any)
+            prevType = newType;
 
         // Prevents reassignment of different types
         if (newType != prevType)
         {
-            _errorsBag.ReportRunTimeError($"Type {newType?.Name} cannot be assigned to type {prevType?.Name}",
+            _errorsBag.ReportRunTimeError($"Type {newType} cannot be assigned to type {prevType}",
                 context, assignment.Start,
                 assignment.End);
             return null;
         }
 
-        context.Symbols[variableName] = value;
+        var variableSymbol = new VariableSymbol(newType, value);
+        context.Symbols[variableName] = variableSymbol;
         return value;
     }
 
@@ -244,10 +268,17 @@ internal sealed class Interpreter
     {
         var variableName = variable.IdentifierToken.Text;
         var existingVar = context.Symbols[variableName];
-        if (existingVar != null)
-            return existingVar;
+        if (existingVar == null)
+        {
+            _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined", context, variable.Start,
+                variable.End);
+            return null;
+        }
 
-        _errorsBag.ReportRunTimeError($"Variable '{variableName}' is not defined.", context, variable.Start,
+        if (existingVar.SymbolType is not SymbolType.Any)
+            return existingVar.Value;
+
+        _errorsBag.ReportRunTimeError($"Variable '{variableName}' has not been initialised", context, variable.Start,
             variable.End);
         return null;
     }
@@ -269,13 +300,14 @@ internal sealed class Interpreter
             return null;
         }
 
-        var functionDeclaration = (FunctionDeclarationStatement)localContext.Symbols[functionName]!;
-        var parameters = functionDeclaration.ParametersList;
+        var functionSymbol = (FunctionSymbol)localContext.Symbols[functionName]!;
+        var parameters = functionSymbol.ParametersList;
         var arguments = function.Arguments;
         if (parameters.Count != arguments.Count)
         {
             _errorsBag.ReportRunTimeError(
-                $"'{functionName}' expects {parameters.Count} arguments, but {arguments.Count} were provided", localContext,
+                $"'{functionName}' expects {parameters.Count} arguments, but {arguments.Count} were provided",
+                localContext,
                 function.Start,
                 function.End);
             return null;
@@ -288,37 +320,42 @@ internal sealed class Interpreter
             var argumentValue = VisitExpression(argumentExpression.Argument, localContext);
 
             if (argumentValue is null) return null;
-            var argumentType = argumentValue switch
-            {
-                int => "integer",
-                double => "double",
-                bool => "boolean",
-                _ => "unknown"
-            };
+            var argumentType = argumentValue.MatchType();
 
-            switch (parameter.Type.Kind)
+            if (parameter.SymbolType != argumentType)
             {
-                case TokenKind.IntegerKeyword when argumentValue is int avi:
-                    localContext.Symbols[parameter.IdentifierToken.Text] = avi;
+                _errorsBag.ReportRunTimeError(
+                    $"Argument {i + 1} of '{functionName}' is of type {argumentType}, but {parameter.SymbolType} was expected",
+                    localContext, function.Start,
+                    function.End);
+                return null;
+            }
+
+            VariableSymbol parameterSymbol;
+            switch (argumentValue)
+            {
+                case int avi:
+                    parameterSymbol = new VariableSymbol(SymbolType.Integer, avi);
+                    localContext.Symbols[parameter.IdentifierToken.Text] = parameterSymbol;
                     break;
-                case TokenKind.DoubleKeyword when argumentValue is double avd:
-                    localContext.Symbols[parameter.IdentifierToken.Text] = avd;
+                case double avd:
+                    parameterSymbol = new VariableSymbol(SymbolType.Double, avd);
+                    localContext.Symbols[parameter.IdentifierToken.Text] = parameterSymbol;
                     break;
-                case TokenKind.BooleanKeyword when argumentValue is bool avb:
-                    localContext.Symbols[parameter.IdentifierToken.Text] = avb;
+                case bool avb:
+                    parameterSymbol = new VariableSymbol(SymbolType.Boolean, avb);
+                    localContext.Symbols[parameter.IdentifierToken.Text] = parameterSymbol;
                     break;
                 default:
-                    _errorsBag.ReportRunTimeError(
-                        $"Argument {i + 1} of '{functionName}' is of type {argumentType}, but {parameter.Type.Kind.GetText()} was expected",
-                        localContext, function.Start,
+                    _errorsBag.ReportRunTimeError("Unsupported argument type", localContext, function.Start,
                         function.End);
                     return null;
             }
         }
 
-        var result = VisitStatement(functionDeclaration.Body, localContext);
+        var result = VisitStatement(functionSymbol.Value, localContext);
 
-        foreach (var parameter in functionDeclaration.ParametersList)
+        foreach (var parameter in functionSymbol.ParametersList)
             localContext.Symbols.Remove(parameter.IdentifierToken.Text);
 
         return result;

@@ -6,23 +6,32 @@ public static class Program
 {
     public static void Main(string[] args)
     {
-        const string path = "/Users/alberto/Desktop/C#/Hada/Samples/Example.ash";
-        var text = File.ReadAllText(path);
-        if (string.IsNullOrEmpty(text)) return;
+        //const string path = "/Users/alberto/Desktop/C#/Hada/Samples/Example.ash";
+        //var text = File.ReadAllText(path);
+        //if (string.IsNullOrEmpty(text)) return;
 
-        var compiler = new Compiler(text);
-
-        var interpreterResult = compiler.Run();
-        if (interpreterResult is null)
+        var compiler = new Compiler();
+        //var result = compiler.Run(text);
+        //Console.WriteLine(result?.Result);
+        while (true)
         {
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine("Compilation failed!");
-            Console.ResetColor();
-            return;
-        }
+            Console.Write(">> ");
+            var text = Console.ReadLine();
+            if (string.IsNullOrEmpty(text)) return;
 
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine(interpreterResult.Result);
+            var interpreterResult = compiler.Run(text);
+            if (interpreterResult is null)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkRed;
+                Console.WriteLine("Compilation failed!");
+                Console.ResetColor();
+                continue;
+            }
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine(interpreterResult.Result);
+            Console.ResetColor();
+        }
     }
 
 

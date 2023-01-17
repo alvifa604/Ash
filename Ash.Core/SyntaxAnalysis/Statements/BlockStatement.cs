@@ -2,7 +2,7 @@ using Ash.Core.LexicalAnalysis;
 
 namespace Ash.Core.SyntaxAnalysis.Statements;
 
-internal class BlockStatement : Statement
+public class BlockStatement : Statement
 {
     public Statement Body { get; }
     public Token OpenBraceToken { get; }

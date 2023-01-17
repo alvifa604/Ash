@@ -24,9 +24,14 @@ It's named Ash as A#, A as in my name and # as it's written in C#.
 
 ## Types
 
+- Any: Any type of value
+    - Default: 0.
 - Integer: number with no decimal.
+    - Default: 0.
 - Double: number with decimal.
+    - Default: 0.0.
 - Boolean: true or false.
+    - Default: false.
 
 ## Operators
 
@@ -79,12 +84,29 @@ It's named Ash as A#, A as in my name and # as it's written in C#.
 
 ### Variables
 
-- Must be declared with the 'let' keyword (for now).
+When declaring a variable this can be done in different ways:
+
+1. `let variableName;`
+    - This will create a variable with the type 'any'.
+    - This allows further initialisation of the variable to other types.
+2. `let variableName = value;`
+    - This will create a variable with the type of the value.
+    - This allows the compiler to infer the variable type.
+3. `<type> variableName;`
+    - This will create a variable with the specified type with a default value.
+4. `<type> variableName = value;`
+    - This will create a variable with the specified type and value.
+
+#### Notes:
+
+- Once assigned a type, a variable cannot be changed to another type. [See Types](#Types)
+- Variables of type 'any' cannot be accessed, they need to be initialised first.
+
+#### Specifications:
+
 - Must start with a letter.
 - Can include numbers and underscores.
-- Cannot reassign types.
-- Declare and assign in one line.
-- Declare and assign must end with a semicolon.
+- Declaration and initialisation must end with a semicolon.
 - Cannot be a keyword.
 - Are case sensitive.
 - Are accessed with the variable name.
@@ -99,7 +121,17 @@ let example_3 = true;
 
 // Reassigning variables
 example_1 = true // Error
-example_1 = 24; // Valid
+example_1 = 24;  // Valid
+
+//Typed variables
+let anyVariable;     // Any type
+anyVariable;         // Error, varable
+anyVariable = 23;    // Integer type
+anyVaraible = false  // Error
+
+integer example_4 = 24;      // Integer type
+double example_5 = 2,3;      // Double type
+boolean example_6 = false;   // Boolean type
 ```
 
 ### If statements
