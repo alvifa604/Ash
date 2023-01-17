@@ -1,9 +1,9 @@
-namespace Ash.Core.Interpretation;
+namespace Ash.Core.Interpretation.Symbols;
 
-public sealed class SymbolTable
+public sealed class SymbolTableV1
 {
     private readonly Dictionary<string, object?> _symbols;
-    public SymbolTable? Parent { get; }
+    public SymbolTableV1? Parent { get; }
 
     public object? this[string name]
     {
@@ -17,7 +17,7 @@ public sealed class SymbolTable
         set => _symbols[name] = value;
     }
 
-    public SymbolTable(SymbolTable? parent = null)
+    public SymbolTableV1(SymbolTableV1? parent = null)
     {
         _symbols = new Dictionary<string, object?>();
         Parent = parent;

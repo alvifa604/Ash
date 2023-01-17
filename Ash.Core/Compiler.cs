@@ -1,5 +1,6 @@
 using Ash.Core.Errors;
 using Ash.Core.Interpretation;
+using Ash.Core.Interpretation.Symbols;
 using Ash.Core.LexicalAnalysis;
 using Ash.Core.SyntaxAnalysis;
 using Ash.Core.Text;
@@ -15,7 +16,7 @@ public sealed class Compiler
     {
         var globalSymbolTable = new SymbolTable
         {
-            ["null"] = 0
+            ["null"] = new VariableSymbol(SymbolType.Any, null)
         };
         _context = new Context("main", null, globalSymbolTable);
     }

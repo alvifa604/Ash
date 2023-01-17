@@ -1,3 +1,5 @@
+using Ash.Core.Interpretation;
+
 namespace Ash.Core.LexicalAnalysis;
 
 public static class Extensions
@@ -91,15 +93,15 @@ public static class Extensions
         };
     }
 
-    public static TokenKind? GetDataType(this TokenKind kind)
+    public static SymbolType? GetSymbolType(this TokenKind kind)
     {
         return kind switch
         {
-            TokenKind.IntegerToken => TokenKind.IntegerKeyword,
-            TokenKind.DoubleToken => TokenKind.DoubleKeyword,
-            TokenKind.TrueKeyword => TokenKind.BooleanKeyword,
-            TokenKind.FalseKeyword => TokenKind.BooleanKeyword,
-            _ => null
+            TokenKind.IntegerToken or TokenKind.IntegerKeyword => SymbolType.Integer,
+            TokenKind.DoubleToken or TokenKind.DoubleKeyword => SymbolType.Double,
+            TokenKind.TrueKeyword or TokenKind.FalseKeyword or TokenKind.BooleanKeyword => SymbolType.Boolean,
+            TokenKind.FunctionKeyword => SymbolType.Function,
+            _ => SymbolType.Any
         };
     }
 }

@@ -1,4 +1,5 @@
 using Ash.Core.Errors;
+using Ash.Core.Interpretation;
 using Ash.Core.LexicalAnalysis;
 using Ash.Core.SyntaxAnalysis.Expressions;
 using Ash.Core.SyntaxAnalysis.Statements;
@@ -36,7 +37,8 @@ internal sealed class Parser
     {
         return Current.Kind switch
         {
-            TokenKind.LetKeyword => ParseDeclarationStatement(),
+            TokenKind.LetKeyword or TokenKind.IntegerKeyword or TokenKind.BooleanKeyword or TokenKind.DoubleKeyword =>
+                ParseDeclarationStatement(),
             TokenKind.IfKeyword => ParseIfStatement(),
             TokenKind.ForKeyword => ParseForStatement(),
             TokenKind.WhileKeyword => ParseWhileStatement(),
@@ -48,13 +50,31 @@ internal sealed class Parser
 
     private DeclarationStatement ParseDeclarationStatement()
     {
-        var letToken = MatchToken(TokenKind.LetKeyword);
-        var identifier = MatchToken(TokenKind.IdentifierToken);
+        return Current.Kind switch
+        {
+            TokenKind.IntegerKeyword => ParseDeclaration(TokenKind.IntegerKeyword, SymbolType.Integer),
+            TokenKind.DoubleKeyword => ParseDeclaration(TokenKind.DoubleKeyword, SymbolType.Double),
+            TokenKind.BooleanKeyword => ParseDeclaration(TokenKind.BooleanKeyword, SymbolType.Boolean),
+            _ => ParseDeclaration(TokenKind.LetKeyword, SymbolType.Any)
+        };
+    }
+
+    private DeclarationStatement ParseDeclaration(TokenKind keyword, SymbolType symbolType)
+    {
+        var keywordToken = MatchToken(keyword);
+        var identifierToken = MatchToken(TokenKind.IdentifierToken);
+        if (Current.Kind is TokenKind.SemicolonToken)
+        {
+            var semicolonToken = MatchToken(TokenKind.SemicolonToken);
+            return new DeclarationStatement(keywordToken, identifierToken, null, null, keywordToken.Start,
+                semicolonToken.End, symbolType);
+        }
+
         var equalsToken = MatchToken(TokenKind.AssignmentToken);
         var expression = ParseExpression();
         MatchToken(TokenKind.SemicolonToken);
-        return new DeclarationStatement(letToken, identifier, equalsToken, expression, letToken.Start,
-            expression.End);
+        return new DeclarationStatement(keywordToken, identifierToken, equalsToken, expression, keywordToken.Start,
+            expression.End, symbolType);
     }
 
     private IfStatement ParseIfStatement()
@@ -168,15 +188,22 @@ internal sealed class Parser
 
     private ParameterNode? ParseParameter()
     {
-        var type = ParseType();
-        if (type is null)
+        var tokenType = ParseType();
+        if (tokenType is null)
+        {
+            ErrorsBag.ReportInvalidSyntax("Parameters must specify the type", Current.Start, Current.End);
+            return null;
+        }
+
+        var type = tokenType.Kind.GetSymbolType();
+        if (type is null or SymbolType.Any)
         {
             ErrorsBag.ReportInvalidSyntax("Parameters must specify the type", Current.Start, Current.End);
             return null;
         }
 
         var identifier = MatchToken(TokenKind.IdentifierToken);
-        return new ParameterNode(identifier, type);
+        return new ParameterNode(identifier, type.Value);
     }
 
     private Token? ParseType()

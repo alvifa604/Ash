@@ -3,6 +3,7 @@ using System.Text;
 using Ash.Core.Interpretation;
 using Ash.Core.LexicalAnalysis;
 using Ash.Core.Text;
+using Type = System.Type;
 
 namespace Ash.Core.Errors;
 

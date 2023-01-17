@@ -24,20 +24,3 @@ internal class FunctionDeclarationStatement : Statement
         End = body.End;
     }
 }
-
-internal class ParameterNode : Node
-{
-    public Token IdentifierToken { get; }
-    public Token Type { get; }
-    public override TokenKind Kind => TokenKind.Parameter;
-    public override Position Start { get; }
-    public override Position End { get; }
-
-    public ParameterNode(Token parameter, Token dataType)
-    {
-        IdentifierToken = parameter;
-        Type = dataType;
-        Start = dataType.Start;
-        End = parameter.End;
-    }
-}
